@@ -10,7 +10,30 @@ function App() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [isSpinning, setIsSpinning] = useState(false)
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false)
+  const [slowRotation, setSlowRotation] = useState(0)
+  const [currentRotation, setCurrentRotation] = useState(0)
+  const [showWinner, setShowWinner] = useState(false)
+  const [winner, setWinner] = useState(null)
   const wheelRef = useRef(null)
+
+  // Continuous slow rotation and update current rotation
+  useEffect(() => {
+    if (!isSpinning) {
+      const interval = setInterval(() => {
+        setSlowRotation(prev => (prev + 1.5) % 360)
+      }, 50)
+      return () => clearInterval(interval)
+    }
+  }, [isSpinning])
+
+  // Update current rotation continuously (for pointer color)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentRotation(slowRotation + rotation)
+    }, 16) // ~60fps
+    return () => clearInterval(interval)
+  }, [slowRotation, rotation])
 
   const addName = () => {
     if (newName.trim() && !names.includes(newName.trim())) {
@@ -43,32 +66,79 @@ function App() {
     if (isSpinning || names.length === 0) return
     
     setIsSpinning(true)
+    const startRotation = currentRotation
     
     // Calculate random rotation (multiple full spins + random angle)
     const spins = 5 + Math.random() * 5 // 5-10 full spins
     setRotation(prevRotation => {
       const randomAngle = Math.random() * 360
       const totalRotation = prevRotation + spins * 360 + randomAngle
+      const endRotation = slowRotation + totalRotation
       
-      // Calculate which slice the pointer lands on
-      // Pointer is at 0 degrees (right side), so we need to account for that
-      const normalizedAngle = (360 - (totalRotation % 360)) % 360
-      const sliceAngle = 360 / names.length
-      const selectedIndex = Math.floor(normalizedAngle / sliceAngle)
+      // Animate currentRotation during spin to update pointer color
+      const duration = 4000 // 4 seconds
+      const startTime = Date.now()
       
-      // Reset spinning state after animation completes
-      setTimeout(() => {
-        setIsSpinning(false)
-        // You can add logic here to show the selected name
-        console.log('Selected:', names[selectedIndex])
-      }, 4000) // Match CSS transition duration
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        
+        // Easing function matching CSS cubic-bezier(0.17, 0.67, 0.12, 0.99)
+        const ease = (t) => {
+          // Approximate cubic-bezier(0.17, 0.67, 0.12, 0.99)
+          return t < 0.5 
+            ? 4 * t * t * t 
+            : 1 - Math.pow(-2 * t + 2, 3) / 2
+        }
+        
+        const easedProgress = ease(progress)
+        const current = startRotation + (endRotation - startRotation) * easedProgress
+        setCurrentRotation(current)
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        } else {
+          setIsSpinning(false)
+          // Calculate which slice the pointer lands on
+          // Pointer is at 0 degrees (right side, pointing left)
+          // Slices start at -90 degrees (top) and are indexed clockwise
+          // When wheel rotates clockwise by endRotation, what's at 0 degrees now
+          // was at -endRotation before rotation (in original wheel coordinates)
+          // Slices start at -90, so angle from top = -endRotation - (-90) = 90 - endRotation
+          const finalRotation = endRotation % 360
+          const angleFromTop = (90 - finalRotation + 360) % 360
+          const sliceAngle = 360 / names.length
+          const selectedIndex = Math.floor(angleFromTop / sliceAngle) % names.length
+          const winnerName = names[selectedIndex]
+          const winnerColor = colors[selectedIndex % colors.length]
+          setWinner({ name: winnerName, color: winnerColor, index: selectedIndex })
+          setShowWinner(true)
+        }
+      }
+      
+      requestAnimationFrame(animate)
       
       return totalRotation
     })
-  }, [isSpinning, names])
+  }, [isSpinning, names, currentRotation, slowRotation])
 
   const handleWheelClick = () => {
-    spinWheel()
+    if (!showWinner) {
+      spinWheel()
+    }
+  }
+
+  const handleCloseWinner = () => {
+    setShowWinner(false)
+    setWinner(null)
+  }
+
+  const handleRemoveWinner = () => {
+    if (winner) {
+      removeName(winner.name)
+      setShowWinner(false)
+      setWinner(null)
+    }
   }
 
   useEffect(() => {
@@ -83,7 +153,8 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [spinWheel])
 
-  const colors = ['rgb(59, 130, 246)', 'rgb(16, 185, 129)', 'rgb(245, 158, 11)', 'rgb(239, 68, 68)'] // blue, green, yellow, red
+  const colors = ['rgb(255, 217, 0)', 'rgb(0, 177, 0)', 'rgb(0, 195, 255)', 'rgb(255, 64, 64)'] // blue, green, yellow, red
+
 
   return (
     <div className="app">
@@ -133,12 +204,12 @@ function App() {
       <div className="main-content">
         {/* Center - Wheel */}
         <div className="wheel-container">
-          <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: isSpinning ? 'not-allowed' : 'pointer' }}>
+          <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
             <svg 
               className="wheel" 
               viewBox="0 0 750 750"
               ref={wheelRef}
-              style={{ transform: `rotate(${rotation}deg)` }}
+              style={{ transform: `rotate(${slowRotation + rotation}deg)` }}
             >
               <defs>
                 <filter id="shadow">
@@ -180,7 +251,8 @@ function App() {
                     <path
                       d={path}
                       fill={colors[index % colors.length]}
-                      filter="url(#shadow)"
+                      stroke="black"
+                      strokeWidth="0.5"
                     />
                     <text
                       x={textX}
@@ -201,7 +273,7 @@ function App() {
                   </g>
                 )
               })}
-              <circle cx="375" cy="375" r="38" fill="white" filter="url(#shadow)"/>
+              <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)"/>
             </svg>
             <div className="wheel-pointer"></div>
             <div className="wheel-overlay" onClick={(e) => e.stopPropagation()}>
@@ -212,72 +284,115 @@ function App() {
         </div>
 
         {/* Right Sidebar - Entries */}
-        <div className="right-sidebar">
-          <div className="sidebar-header">
-            <div className="tabs">
-              <button className="tab active">Entries {names.length}</button>
-              <button className="tab">Results 0</button>
+        <div className={`right-sidebar ${isSidebarHidden ? 'sidebar-hidden' : ''}`}>
+          {isSidebarHidden ? (
+            <div className="sidebar-header-hidden">
+              <label className="hide-checkbox">
+                <input 
+                  type="checkbox" 
+                  checked={isSidebarHidden}
+                  onChange={(e) => setIsSidebarHidden(e.target.checked)}
+                />
+                <span>Hide</span>
+              </label>
             </div>
-            <label className="hide-checkbox">
-              <input type="checkbox" />
-              <span>Hide</span>
-            </label>
-          </div>
-          
-          <div className="sidebar-actions">
-            <button className="action-btn" onClick={shuffleNames} title="Shuffle">
-              <FiShuffle className="icon" />
-              <span>Shuffle</span>
-            </button>
-            <button className="action-btn" onClick={sortNames} title="Sort">
-              <span className="icon" style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.5' }}>
-                <FiArrowUp style={{ fontSize: '10px' }} />
-                <FiArrowDown style={{ fontSize: '10px' }} />
-              </span>
-              <span>Sort</span>
-            </button>
-            <button className="action-btn dropdown" title="Add image">
-              <span>Add image</span>
-              <FiChevronDown className="icon" />
-            </button>
-            <label className="advanced-checkbox">
-              <input 
-                type="checkbox" 
-                checked={showAdvanced}
-                onChange={(e) => setShowAdvanced(e.target.checked)}
-              />
-              <span>Advanced</span>
-            </label>
-          </div>
-
-          <div className="entries-list">
-            <div className="add-name-input">
-              <input
-                type="text"
-                placeholder="Add name..."
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-              <button onClick={addName}>+</button>
-            </div>
-            <div className="names-container">
-              {names.map((name, index) => (
-                <div key={index} className="name-item">
-                  <span>{name}</span>
-                  <button 
-                    className="remove-btn"
-                    onClick={() => removeName(name)}
-                    title="Remove"
-                  >
-                    ×
-                  </button>
+          ) : (
+            <>
+              <div className="sidebar-header">
+                <div className="tabs">
+                  <button className="tab active">Entries {names.length}</button>
+                  <button className="tab">Results 0</button>
                 </div>
-              ))}
+                <label className="hide-checkbox">
+                  <input 
+                    type="checkbox" 
+                    checked={isSidebarHidden}
+                    onChange={(e) => setIsSidebarHidden(e.target.checked)}
+                  />
+                  <span>Hide</span>
+                </label>
+              </div>
+              
+              <div className="sidebar-actions">
+                <button className="action-btn" onClick={shuffleNames} title="Shuffle">
+                  <FiShuffle className="icon" />
+                  <span>Shuffle</span>
+                </button>
+                <button className="action-btn" onClick={sortNames} title="Sort">
+                  <span className="icon" style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.5' }}>
+                    <FiArrowUp style={{ fontSize: '10px' }} />
+                    <FiArrowDown style={{ fontSize: '10px' }} />
+                  </span>
+                  <span>Sort</span>
+                </button>
+                <button className="action-btn dropdown" title="Add image">
+                  <span>Add image</span>
+                  <FiChevronDown className="icon" />
+                </button>
+                <label className="advanced-checkbox">
+                  <input 
+                    type="checkbox" 
+                    checked={showAdvanced}
+                    onChange={(e) => setShowAdvanced(e.target.checked)}
+                  />
+                  <span>Advanced</span>
+                </label>
+              </div>
+
+              <div className="entries-list">
+                <div className="add-name-input">
+                  <input
+                    type="text"
+                    placeholder="Add name..."
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                  />
+                  <button onClick={addName}>+</button>
+                </div>
+                <div className="names-container">
+                  {names.map((name, index) => (
+                    <div key={index} className="name-item">
+                      <span>{name}</span>
+                      <button 
+                        className="remove-btn"
+                        onClick={() => removeName(name)}
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="sidebar-footer">
+                <span className="version-text">Version 387</span>
+                <a href="#" className="changelog-link">Changelog</a>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Winner Pop-up */}
+      {showWinner && winner && (
+        <div className="winner-overlay" onClick={handleCloseWinner}>
+          <div className="winner-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="winner-header" style={{ backgroundColor: winner.color }}>
+              <h2>We have a winner!</h2>
+              <button className="winner-close-btn" onClick={handleCloseWinner}>×</button>
+            </div>
+            <div className="winner-content">
+              <div className="winner-name">{winner.name}</div>
+              <div className="winner-buttons">
+                <button className="winner-btn close-btn" onClick={handleCloseWinner}>Close</button>
+                <button className="winner-btn remove-btn" onClick={handleRemoveWinner}>Remove</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
