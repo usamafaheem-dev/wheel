@@ -1085,12 +1085,14 @@ html, body {
   .main-content {
     flex-direction: column;
     overflow: visible;
-    flex: none;
+    flex: 1;
+    min-height: 0;
   }
 
   .wheel-container {
     padding: 20px;
     min-height: auto;
+    flex-shrink: 0;
   }
 
   .wheel-wrapper {
@@ -1113,6 +1115,10 @@ html, body {
     border-left: none;
     border-top: 1px solid #3a3a3a;
     max-height: none;
+    flex: 1;
+    min-height: 50vh;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -1130,6 +1136,10 @@ html, body {
 
   .right-sidebar {
     padding: 15px;
+  }
+
+  .add-name-input textarea {
+    min-height: 300px !important;
   }
 
   .header {
@@ -1168,6 +1178,10 @@ html, body {
 
   .right-sidebar {
     padding: 12px;
+  }
+
+  .add-name-input textarea {
+    min-height: 350px !important;
   }
 
   .header-btn {

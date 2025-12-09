@@ -407,7 +407,7 @@ function App() {
                   const midAngle = (startAngle + endAngle) / 2
                   const innerRadius = 120
                   const outerRadius = 280
-                  const textRadius = outerRadius - 25
+                  const textRadius = outerRadius - 10
                   const textX = 375 + textRadius * Math.cos(midAngle)
                   const textY = 375 + textRadius * Math.sin(midAngle)
                   const textRotationDeg = (midAngle * 180 / Math.PI)
@@ -417,7 +417,7 @@ function App() {
                   // Scale down more gradually - keep larger font size longer
                   const arcLength = textRadius * angle * (Math.PI / 180)
                   // Use a larger divisor to keep font size larger longer, only scale down for many entries
-                  const fontSize = Math.max(12, Math.min(24, arcLength / 15))
+                  const fontSize = Math.max(16, Math.min(36, arcLength / 10))
                   
                   return (
                     <g key={index}>
@@ -540,7 +540,7 @@ function App() {
                 // Text should be horizontal along the slice length
                 const innerRadius = 120
                 const outerRadius = 280
-                const textRadius = outerRadius - 25
+                const textRadius = outerRadius - 10
                 
                 // Calculate text position at outer radius of slice
                 const textX = 375 + textRadius * Math.cos(midAngle)
@@ -555,7 +555,7 @@ function App() {
                 // Scale down more gradually - keep larger font size longer
                 const arcLength = textRadius * angle * (Math.PI / 180)
                 // Use a larger divisor to keep font size larger longer, only scale down for many entries
-                const fontSize = Math.max(12, Math.min(24, arcLength / 15))
+                const fontSize = Math.max(18, Math.min(36, arcLength / 8))
                 
                 return (
                   <g key={index}>
