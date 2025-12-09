@@ -8,16 +8,13 @@ function App() {
   ])
   const [results, setResults] = useState([])
   const [activeTab, setActiveTab] = useState('entries')
-  const [newName, setNewName] = useState('')
+  const [namesText, setNamesText] = useState('Ali\nBeatriz\nCharles\nDiya\nEric\nFatima\nGabriel\nHanna')
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [rotation, setRotation] = useState(0)
+  const [finalRotation, setFinalRotation] = useState(0) // Single rotation value - the only source of truth
   const [isSpinning, setIsSpinning] = useState(false)
   const [isSidebarHidden, setIsSidebarHidden] = useState(false)
-  const [slowRotation, setSlowRotation] = useState(0)
-  const [currentRotation, setCurrentRotation] = useState(0)
   const [showWinner, setShowWinner] = useState(false)
   const [winner, setWinner] = useState(null)
-  const [frozenRotation, setFrozenRotation] = useState(null) // Store frozen rotation value as state
   const [showCustomize, setShowCustomize] = useState(false)
   const [customizeTab, setCustomizeTab] = useState('during-spin')
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -27,7 +24,7 @@ function App() {
     displayDuplicates: true,
     spinSlowly: false,
     showTitle: true,
-    spinTime: 10,
+    spinTime: 3,
     maxNamesVisible: 1000,
     afterSpinSound: 'Subdued applause',
     afterSpinVolume: 50,
@@ -54,28 +51,27 @@ function App() {
   const winnerProcessedRef = useRef(false)
   const animationFrameRef = useRef(null)
   const animationCompletedRef = useRef(false) // Track if animation is completed
-  const frozenRotationRef = useRef(null) // Store frozen rotation immediately (synchronous)
-  const slowRotationFrameRef = useRef(null) // For slow rotation animation
-  const currentRotationFrameRef = useRef(null) // For current rotation updates
+  const isFrozenRef = useRef(false) // Track if wheel is frozen
 
-  // Continuous slow rotation - optimized for smoothness using requestAnimationFrame
+  // Continuous slow rotation - only when not spinning and not frozen
   useEffect(() => {
     // Cancel any existing slow rotation animation
-    if (slowRotationFrameRef.current) {
-      cancelAnimationFrame(slowRotationFrameRef.current)
-      slowRotationFrameRef.current = null
+    if (animationFrameRef.current && !isSpinning) {
+      // Don't cancel if spinning animation is active
+      return
     }
     
-    // Stop slow rotation when spinning, when winner is found, or when pop-up is shown
-    if (isSpinning || winner || showWinner) {
+    // Stop slow rotation when spinning, when winner is found, when pop-up is shown, or when frozen
+    if (isSpinning || winner || showWinner || isFrozenRef.current) {
       return
     }
     
     let lastTime = performance.now()
+    const slowRotationFrameRef = { current: null }
     
     const animateSlow = (currentTime) => {
       // Check if we should stop (conditions may have changed)
-      if (isSpinning || winner || showWinner) {
+      if (isSpinning || winner || showWinner || isFrozenRef.current) {
         slowRotationFrameRef.current = null
         return
       }
@@ -83,8 +79,8 @@ function App() {
       const delta = currentTime - lastTime
       lastTime = currentTime
       
-      // Update slow rotation smoothly (1.5 degrees per 50ms = 30 degrees per second)
-      setSlowRotation(prev => (prev + (1.5 * delta / 50)) % 360)
+      // Update finalRotation smoothly (1.5 degrees per 50ms = 30 degrees per second)
+      setFinalRotation(prev => (prev + (1.5 * delta / 50)) % 360)
       
       slowRotationFrameRef.current = requestAnimationFrame(animateSlow)
     }
@@ -98,53 +94,29 @@ function App() {
     }
   }, [isSpinning, winner, showWinner])
 
-  // Update current rotation continuously (for pointer color) - optimized
-  useEffect(() => {
-    // Cancel any existing current rotation animation
-    if (currentRotationFrameRef.current) {
-      cancelAnimationFrame(currentRotationFrameRef.current)
-      currentRotationFrameRef.current = null
-    }
+  // Update names array in real-time as user types in textarea
+  const handleNamesTextChange = (e) => {
+    const text = e.target.value
+    setNamesText(text)
     
-    if (isSpinning || winner || showWinner || frozenRotation !== null) {
-      return // Don't update during spin or when winner is determined or when frozen
-    }
-    
-    // Use requestAnimationFrame for smoother updates
-    const updateRotation = () => {
-      // Check conditions on each frame (may have changed)
-      if (isSpinning || winner || showWinner || frozenRotation !== null) {
-        currentRotationFrameRef.current = null
-        return
-      }
-      
-      setCurrentRotation(slowRotation + rotation)
-      currentRotationFrameRef.current = requestAnimationFrame(updateRotation)
-    }
-    
-    currentRotationFrameRef.current = requestAnimationFrame(updateRotation)
-    return () => {
-      if (currentRotationFrameRef.current) {
-        cancelAnimationFrame(currentRotationFrameRef.current)
-        currentRotationFrameRef.current = null
-      }
-    }
-  }, [slowRotation, rotation, isSpinning, winner, showWinner, frozenRotation])
-
-  const addName = () => {
-    if (newName.trim() && !names.includes(newName.trim())) {
-      setNames([...names, newName.trim()])
-      setNewName('')
-    }
+    // Parse textarea content into names array (split by newlines, filter empty lines)
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+    setNames(lines)
   }
 
   const removeName = (nameToRemove) => {
-    setNames(names.filter(name => name !== nameToRemove))
+    // Remove the name from textarea
+    const lines = namesText.split('\n').filter(line => line.trim() !== nameToRemove)
+    const newText = lines.join('\n')
+    setNamesText(newText)
+    setNames(lines.filter(line => line.trim().length > 0))
   }
 
   const shuffleNames = () => {
     const shuffled = [...names].sort(() => Math.random() - 0.5)
     setNames(shuffled)
+    // Update textarea to match shuffled names
+    setNamesText(shuffled.join('\n'))
   }
 
   const sortNames = () => {
@@ -152,12 +124,8 @@ function App() {
       return a.localeCompare(b, undefined, { sensitivity: 'base' })
     })
     setNames(sorted)
-  }
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      addName()
-    }
+    // Update textarea to match sorted names
+    setNamesText(sorted.join('\n'))
   }
 
   const spinWheel = useCallback(() => {
@@ -169,136 +137,140 @@ function App() {
       animationFrameRef.current = null
     }
     
-    // Clear frozen rotation when starting new spin
-    frozenRotationRef.current = null
-    setFrozenRotation(null)
-    animationCompletedRef.current = false // Reset completion flag
-    
-    setIsSpinning(true)
-    const startRotation = currentRotation
-    // Capture slowRotation at the start of spin (when button is clicked)
-    const initialSlowRotation = slowRotation
-    
-    // Calculate random rotation (multiple full spins + random angle)
-    const spins = 5 + Math.random() * 5 // 5-10 full spins
+    // Clear frozen state when starting new spin
+    isFrozenRef.current = false
+    animationCompletedRef.current = false
     winnerProcessedRef.current = false
     
-    setRotation(prevRotation => {
-      const randomAngle = Math.random() * 360
-      const totalRotation = prevRotation + spins * 360 + randomAngle
-      // Use initialSlowRotation (captured at spin start) for endRotation calculation
-      const endRotation = initialSlowRotation + totalRotation
-      
-      // Animate currentRotation during spin to update pointer color
-      const duration = settings.spinTime * 1000 // Use spin time setting in milliseconds
-      const startTime = performance.now() // Use performance.now() for more precise timing
-      
-      // Easing function: starts fast, slows down at the end (ease-out)
-      // This makes the wheel spin fast immediately and gradually slow down
-      const ease = (t) => {
-        // Ease-out cubic: starts fast, slows down smoothly
-        return 1 - Math.pow(1 - t, 3)
+    setIsSpinning(true)
+    
+    // Get current rotation - this is the ONLY rotation value
+    const startRotation = finalRotation
+    
+    // Base spin speed (degrees per second) for calculating total rotation
+    const baseSpeed = 720 // 2 full rotations per second
+    
+    // Duration is exactly what the user sets (in seconds)
+    const duration = settings.spinTime * 1000 // Convert to milliseconds
+    
+    // Calculate total rotation based on base speed and duration
+    // Total rotation = speed * time (in seconds)
+    const totalRotationDegrees = baseSpeed * settings.spinTime
+    
+    // Add random angle for unpredictability (0-360 degrees)
+    const randomAngle = Math.random() * 360
+    
+    // Final rotation = start + total rotation + random angle
+    const endRotation = startRotation + totalRotationDegrees + randomAngle
+    
+    const startTime = performance.now()
+    
+    // Easing function: starts just a tiny bit slower, then fast, then slows down dramatically
+    // This creates the effect: slight acceleration at start, fast spin, very gradual slowdown at the end
+    const ease = (t) => {
+      // Ease-out quartic: starts just a pinch slower than quintic, still has dramatic slowdown at end
+      // Power of 4 gives slightly gentler start than power of 5, but still strong deceleration
+      return 1 - Math.pow(1 - t, 4)
+    }
+    
+    const animate = () => {
+      // Prevent any further execution if already completed
+      if (animationCompletedRef.current) {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+          animationFrameRef.current = null
+        }
+        return
       }
       
-      const animate = () => {
-        // Prevent any further execution if already completed
+      const elapsed = performance.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      
+      if (progress < 1) {
+        // Check again if completed
         if (animationCompletedRef.current) {
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current)
-            animationFrameRef.current = null
-          }
           return
         }
+        // Apply easing for smooth acceleration and deceleration
+        const easedProgress = ease(progress)
+        const current = startRotation + (endRotation - startRotation) * easedProgress
+        // Update ONLY finalRotation - the single source of truth
+        setFinalRotation(current)
+        animationFrameRef.current = requestAnimationFrame(animate)
+      } else {
+        // Animation complete - stop IMMEDIATELY at exact target
+        animationCompletedRef.current = true
         
-        const elapsed = performance.now() - startTime
-        const progress = Math.min(elapsed / duration, 1)
+        // Cancel animation frame immediately
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+          animationFrameRef.current = null
+        }
         
-        if (progress < 1) {
-          // Check again if completed (in case it was set elsewhere)
-          if (animationCompletedRef.current) {
-            return
-          }
-          const easedProgress = ease(progress)
-          const current = startRotation + (endRotation - startRotation) * easedProgress
-          setCurrentRotation(current)
-          // Only schedule next frame if not completed
-          if (!animationCompletedRef.current) {
-            animationFrameRef.current = requestAnimationFrame(animate)
-          }
-        } else {
-          // Animation complete - stop IMMEDIATELY at exact target
-          // Mark as completed IMMEDIATELY to prevent any further frames
-          animationCompletedRef.current = true
+        // Set to EXACT endRotation - freeze immediately
+        setFinalRotation(endRotation)
+        isFrozenRef.current = true
+        
+        // Only process winner once
+        if (!winnerProcessedRef.current) {
+          winnerProcessedRef.current = true
           
-          // Cancel animation frame immediately
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current)
-            animationFrameRef.current = null
-          }
-          
-          // Set to EXACT endRotation - no calculation, no easing, just the exact target
-          // This prevents any overshoot or movement past the target
-          // The actual displayed rotation will be endRotation
-          const actualDisplayRotation = endRotation
-          setCurrentRotation(actualDisplayRotation)
-          
-          // Freeze wheel at exact final position immediately - DO NOT CHANGE THIS
-          frozenRotationRef.current = actualDisplayRotation
-          setFrozenRotation(actualDisplayRotation)
-          setSlowRotation(initialSlowRotation)
-          
-          // Only process winner once
-          if (!winnerProcessedRef.current) {
-            winnerProcessedRef.current = true
-            
-            // Calculate winner using the FROZEN rotation value
-            // This MUST match what's visually displayed
-            const frozenRot = frozenRotationRef.current // Use the frozen value directly
+          // Calculate winner using the EXACT final rotation value
+          const frozenRot = endRotation
             const sliceAngle = 360 / names.length
+            
+            // The pointer is fixed at 0° (right side, pointing to the right)
+            // After the wheel rotates clockwise by R degrees, find which slice is at the pointer
+            
+            // Normalize rotation to 0-360 range
             const R = ((frozenRot % 360) + 360) % 360
             
-            // Calculate which slice is at the pointer (0°)
-            // Method: Find which slice's START edge is closest to 0° after rotation
-            // This matches what the user sees visually
+            // The pointer is at 0° (right side)
+            // After rotating clockwise by R degrees, what's at the pointer (0°) 
+            // was originally at (-R) degrees in the wheel's coordinate system
+            // Convert to 0-360 range: (360 - R) % 360
+            const pointerAngleInOriginal = (360 - R) % 360
             
-            let minDistance = Infinity
+            // Find which slice contains this angle
+            // Slices start at -90° (top), so slice i covers:
+            // from (i * sliceAngle - 90) to ((i+1) * sliceAngle - 90)
             let selectedIndex = 0
+            let found = false
             
             for (let i = 0; i < names.length; i++) {
-              // Slice i starts at: startAngle = (i * sliceAngle - 90°)
-              const sliceStartAngle = (i * sliceAngle - 90 + 360) % 360
+              // Calculate slice boundaries in original coordinates (0-360 range)
+              const sliceStart = (i * sliceAngle - 90 + 360) % 360
+              const sliceEnd = ((i + 1) * sliceAngle - 90 + 360) % 360
               
-              // After rotation R, this start is at: (sliceStartAngle + R) % 360
-              const rotatedStart = (sliceStartAngle + R) % 360
+              // Check if pointer angle is within this slice
+              let inSlice = false
               
-              // Calculate distance from pointer (0°) to this rotated start
-              // Handle wrap-around (e.g., 350° is close to 0°)
-              let distance = Math.abs(rotatedStart - 0)
-              if (distance > 180) {
-                distance = 360 - distance
+              if (sliceStart < sliceEnd) {
+                // Normal case: slice doesn't wrap around 0°
+                inSlice = pointerAngleInOriginal >= sliceStart && pointerAngleInOriginal < sliceEnd
+              } else {
+                // Wrap-around case: slice crosses 0° boundary (e.g., 315° to 45°)
+                inSlice = pointerAngleInOriginal >= sliceStart || pointerAngleInOriginal < sliceEnd
               }
               
-              // Also check the slice's end edge
-              const sliceEndAngle = ((i + 1) * sliceAngle - 90 + 360) % 360
-              const rotatedEnd = (sliceEndAngle + R) % 360
-              let distanceEnd = Math.abs(rotatedEnd - 0)
-              if (distanceEnd > 180) {
-                distanceEnd = 360 - distanceEnd
-              }
-              
-              // Use the minimum distance (either start or end edge)
-              const minDist = Math.min(distance, distanceEnd)
-              
-              // If this slice contains the pointer (0°), it's the winner
-              // A slice contains 0° if its rotated range includes 0°
-              const startNorm = rotatedStart
-              const endNorm = rotatedEnd
-              const containsPointer = (startNorm <= endNorm && 0 >= startNorm && 0 < endNorm) ||
-                                     (startNorm > endNorm && (0 >= startNorm || 0 < endNorm))
-              
-              if (containsPointer || (minDist < minDistance && minDist < sliceAngle / 2)) {
-                minDistance = minDist
+              if (inSlice) {
                 selectedIndex = i
+                found = true
+                break
+              }
+            }
+            
+            // Fallback: if no slice found (shouldn't happen), find closest slice center
+            if (!found) {
+              let minDist = Infinity
+              for (let i = 0; i < names.length; i++) {
+                const sliceCenter = (i * sliceAngle - 90 + sliceAngle / 2 + 360) % 360
+                let dist = Math.abs(pointerAngleInOriginal - sliceCenter)
+                if (dist > 180) dist = 360 - dist
+                if (dist < minDist) {
+                  minDist = dist
+                  selectedIndex = i
+                }
               }
             }
             
@@ -311,38 +283,25 @@ function App() {
             const winnerName = names[selectedIndex]
             const winnerColor = colors[selectedIndex % colors.length]
             
-            // CRITICAL: Set winner WITHOUT changing frozen rotation
-            // The wheel is already frozen at the correct visual position
-            // We just need to identify which slice is there - DO NOT move the wheel
+            // Set winner and stop spinning
             setWinner({ name: winnerName, color: winnerColor, index: selectedIndex })
-            // Add winner to results
-            setResults(prev => [...prev, winnerName])
-            setActiveTab('results')
-            
-            // THEN stop spinning - winner is already set so wheel will stay frozen
-            // IMPORTANT: frozenRotationRef.current is already set and must NOT change
             setIsSpinning(false)
             
             // Reset ref after processing
             winnerProcessedRef.current = false
             
-            // Wait exactly 1 second after wheel stops, then show pop-up
+            // Wait 5 seconds after wheel stops, then show pop-up
             // Wheel remains frozen during this time and until pop-up is closed
             setTimeout(() => {
               setShowWinner(true)
-            }, 1000)
+            }, 2000)
           }
         }
       }
       
-      // Start animation immediately on next frame
-      // Set initial rotation to show wheel has started
-      setCurrentRotation(startRotation)
+      // Start animation immediately
       animationFrameRef.current = requestAnimationFrame(animate)
-      
-      return totalRotation
-    })
-  }, [isSpinning, names, currentRotation, slowRotation, settings.spinTime])
+  }, [isSpinning, names, finalRotation, settings.spinTime])
 
   const handleWheelClick = () => {
     if (!showWinner) {
@@ -352,27 +311,21 @@ function App() {
 
   const handleCloseWinner = () => {
     setShowWinner(false)
-    // Sync rotation states so wheel position is preserved when switching back to slowRotation + rotation
-    const finalRotation = frozenRotationRef.current !== null ? frozenRotationRef.current : (frozenRotation !== null ? frozenRotation : currentRotation)
-    setSlowRotation(0)
-    setRotation(finalRotation)
-    setCurrentRotation(finalRotation)
-    frozenRotationRef.current = null // Clear frozen rotation ref
-    setFrozenRotation(null) // Clear frozen rotation
+    // Unfreeze wheel - slow rotation can resume
+    isFrozenRef.current = false
     setWinner(null)
   }
 
   const handleRemoveWinner = () => {
     if (winner) {
-      removeName(winner.name)
+      // Remove winner's name from textarea (live text bar) and names array
+      const lines = namesText.split('\n').filter(line => line.trim() !== winner.name)
+      setNamesText(lines.join('\n'))
+      setNames(names.filter(name => name !== winner.name))
+      
       setShowWinner(false)
-      // Sync rotation states so wheel position is preserved when switching back to slowRotation + rotation
-      const finalRotation = frozenRotationRef.current !== null ? frozenRotationRef.current : (frozenRotation !== null ? frozenRotation : currentRotation)
-      setSlowRotation(0)
-      setRotation(finalRotation)
-      setCurrentRotation(finalRotation)
-      frozenRotationRef.current = null // Clear frozen rotation ref
-      setFrozenRotation(null) // Clear frozen rotation
+      // Unfreeze wheel - slow rotation can resume
+      isFrozenRef.current = false
       setWinner(null)
     }
   }
@@ -391,19 +344,16 @@ function App() {
   const handleNew = () => {
     // Reset everything
     setNames(['Ali', 'Beatriz', 'Charles', 'Diya', 'Eric', 'Fatima', 'Gabriel', 'Hanna'])
+    setNamesText('Ali\nBeatriz\nCharles\nDiya\nEric\nFatima\nGabriel\nHanna')
     setResults([])
     setActiveTab('entries')
-    setNewName('')
-    setRotation(0)
+    setFinalRotation(0)
     setIsSpinning(false)
-    setSlowRotation(0)
-    setCurrentRotation(0)
     setShowWinner(false)
     setWinner(null)
     setIsSidebarHidden(false)
     winnerProcessedRef.current = false
-    frozenRotationRef.current = null
-    setFrozenRotation(null)
+    isFrozenRef.current = false
   }
 
   useEffect(() => {
@@ -434,7 +384,7 @@ function App() {
                 className="wheel" 
                 viewBox="0 0 750 750"
                 ref={wheelRef}
-                style={{ transform: `rotate(${frozenRotationRef.current !== null ? frozenRotationRef.current : (frozenRotation !== null ? frozenRotation : (isSpinning || winner || showWinner) ? currentRotation : (slowRotation + rotation))}deg)` }}
+                style={{ transform: `rotate(${finalRotation}deg)` }}
               >
                 <defs>
                   <filter id="shadow">
@@ -457,10 +407,17 @@ function App() {
                   const midAngle = (startAngle + endAngle) / 2
                   const innerRadius = 120
                   const outerRadius = 280
-                  const textRadius = (innerRadius + outerRadius) / 2
+                  const textRadius = outerRadius - 25
                   const textX = 375 + textRadius * Math.cos(midAngle)
                   const textY = 375 + textRadius * Math.sin(midAngle)
                   const textRotationDeg = (midAngle * 180 / Math.PI)
+                  
+                  // Calculate dynamic font size based on slice size (angle)
+                  // Larger slices get larger font, smaller slices get smaller font
+                  // Scale down more gradually - keep larger font size longer
+                  const arcLength = textRadius * angle * (Math.PI / 180)
+                  // Use a larger divisor to keep font size larger longer, only scale down for many entries
+                  const fontSize = Math.max(12, Math.min(24, arcLength / 15))
                   
                   return (
                     <g key={index}>
@@ -474,7 +431,7 @@ function App() {
                         x={textX}
                         y={textY}
                         fill="white"
-                        fontSize="18"
+                        fontSize={fontSize}
                         fontWeight="bold"
                         textAnchor="middle"
                         dominantBaseline="middle"
@@ -556,7 +513,7 @@ function App() {
               className="wheel" 
               viewBox="0 0 750 750"
               ref={wheelRef}
-              style={{ transform: `rotate(${frozenRotationRef.current !== null ? frozenRotationRef.current : (frozenRotation !== null ? frozenRotation : (isSpinning || winner || showWinner) ? currentRotation : (slowRotation + rotation))}deg)` }}
+              style={{ transform: `rotate(${finalRotation}deg)` }}
             >
               <defs>
                 <filter id="shadow">
@@ -583,15 +540,22 @@ function App() {
                 // Text should be horizontal along the slice length
                 const innerRadius = 120
                 const outerRadius = 280
-                const textRadius = (innerRadius + outerRadius) / 2
+                const textRadius = outerRadius - 25
                 
-                // Calculate text position at middle radius of slice
+                // Calculate text position at outer radius of slice
                 const textX = 375 + textRadius * Math.cos(midAngle)
                 const textY = 375 + textRadius * Math.sin(midAngle)
                 
                 // Rotate text to align with the slice direction (radial, from center outward)
                 // Text should be horizontal along the slice length
                 const textRotationDeg = (midAngle * 180 / Math.PI)
+                
+                // Calculate dynamic font size based on slice size (angle)
+                // Larger slices get larger font, smaller slices get smaller font
+                // Scale down more gradually - keep larger font size longer
+                const arcLength = textRadius * angle * (Math.PI / 180)
+                // Use a larger divisor to keep font size larger longer, only scale down for many entries
+                const fontSize = Math.max(12, Math.min(24, arcLength / 15))
                 
                 return (
                   <g key={index}>
@@ -605,7 +569,7 @@ function App() {
                       x={textX}
                       y={textY}
                       fill="white"
-                      fontSize="18"
+                      fontSize={fontSize}
                       fontWeight="bold"
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -700,28 +664,24 @@ function App() {
 
                   <div className="entries-list">
                     <div className="add-name-input">
-                      <input
-                        type="text"
-                        placeholder="Add name..."
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        onKeyPress={handleKeyPress}
+                      <textarea
+                        placeholder="Type names here, press Enter for new line..."
+                        value={namesText}
+                        onChange={handleNamesTextChange}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: '#1a1a1a',
+                          border: '1px solid #3a3a3a',
+                          color: 'white',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
+                          resize: 'none',
+                          boxSizing: 'border-box'
+                        }}
                       />
-                      <button onClick={addName}>+</button>
-                    </div>
-                    <div className="names-container">
-                      {names.map((name, index) => (
-                        <div key={index} className="name-item">
-                          <span>{name}</span>
-                          <button 
-                            className="remove-btn"
-                            onClick={() => removeName(name)}
-                            title="Remove"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 </>
