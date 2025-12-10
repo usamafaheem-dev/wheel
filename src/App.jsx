@@ -772,7 +772,7 @@ function App() {
                           width: '100%',
                           height: '100%',
                           backgroundColor: '#1a1a1a',
-                          border: '1px solid #3a3a3a',
+                          border: '1px solid rgb(255, 255, 255)',
                           color: 'white',
                           padding: '8px 12px',
                           borderRadius: '6px',

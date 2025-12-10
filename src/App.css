@@ -5,16 +5,23 @@ html, body {
   box-sizing: border-box;
   font-family: 'Poppins', sans-serif;
   width: 100%;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app {
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh;
   background: black;
   display: flex;
   flex-direction: column;
   color: white;
+  overflow: hidden;
 }
 
 /* Header */
@@ -79,8 +86,8 @@ html, body {
 
 .wheel-wrapper {
   position: relative;
-  width: 750px;
-  height: 750px;
+  width: 850px;
+  height: 850px;
 }
 
 .wheel {
@@ -130,7 +137,7 @@ html, body {
 
 /* Right Sidebar */
 .right-sidebar {
-  width: 450px;
+  width: 350px;
   background-color: #1a1a1a;
   border-left: 1px solid #3a3a3a;
   display: flex;
@@ -389,14 +396,15 @@ html, body {
 .winner-popup {
   background-color: #1a1a1a;
   border-radius: 12px;
-  width: 500px;
+  width: 1000px;
+  max-width: 90vw;
   overflow: hidden;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .winner-header {
   background-color: rgb(239, 68, 68);
-  padding: 20px;
+  padding: 15px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -404,15 +412,15 @@ html, body {
 
 .winner-header h2 {
   margin: 0;
-  color: white;
+  color: black;
   font-size: 20px;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .winner-close-btn {
   background: transparent;
   border: none;
-  color: white;
+  color: black;
   font-size: 28px;
   cursor: pointer;
   padding: 0;
@@ -430,16 +438,17 @@ html, body {
 }
 
 .winner-content {
-  padding: 40px 20px;
+  padding: 20px 20px;
   text-align: center;
 }
 
 .winner-name {
   font-size: 48px;
-  font-weight: bold;
+  font-weight: 500;
   color: white;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
   text-transform: capitalize;
+  font-family: 'Quicksand', sans-serif;
 }
 
 .winner-buttons {
@@ -1191,34 +1200,34 @@ html, body {
 
 @media (min-width: 993px) and (max-width: 1200px) {
   .right-sidebar {
-    width: 350px;
+    width: 300px;
   }
 
   .wheel-wrapper {
-    width: 600px;
-    height: 600px;
+    width: 680px;
+    height: 680px;
   }
 }
 
 @media (min-width: 1201px) and (max-width: 1400px) {
   .right-sidebar {
-    width: 400px;
+    width: 330px;
   }
 
   .wheel-wrapper {
-    width: 700px;
-    height: 700px;
+    width: 790px;
+    height: 790px;
   }
 }
 
 @media (min-width: 1401px) {
   .right-sidebar {
-    width: 450px;
+    width: 350px;
   }
 
   .wheel-wrapper {
-    width: 750px;
-    height: 750px;
+    width: 850px;
+    height: 850px;
   }
 }
 
