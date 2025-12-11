@@ -1,5 +1,6 @@
 /* Custom CSS styles */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -17,7 +18,7 @@ html, body {
 .app {
   width: 100vw;
   height: 100vh;
-  background: black;
+  background: linear-gradient(135deg, #2b0505 0%, #254c6a 60%, #05051a 100%);
   display: flex;
   flex-direction: column;
   color: white;
@@ -86,8 +87,12 @@ html, body {
 
 .wheel-wrapper {
   position: relative;
-  width: 850px;
-  height: 850px;
+  position: relative;
+  width: min(850px, 90vw);
+  height: min(850px, 90vw);
+  max-width: 850px;
+  max-height: 850px;
+  aspect-ratio: 1;
 }
 
 .wheel {
@@ -108,7 +113,15 @@ html, body {
   border-right: 40px solid rgb(0, 0, 172);
   border-top: 30px solid transparent;
   border-bottom: 30px solid transparent;
+  position: absolute;
+  right: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60px;
+  height: 60px;
   z-index: 5;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+  border: none;
 }
 
 .wheel-overlay {
@@ -138,7 +151,8 @@ html, body {
 /* Right Sidebar */
 .right-sidebar {
   width: 350px;
-  background-color: #1a1a1a;
+  background-color: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
   border-left: 1px solid #3a3a3a;
   display: flex;
   flex-direction: column;
@@ -853,14 +867,12 @@ html, body {
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-  background: conic-gradient(
-    rgb(255, 64, 64) 0deg 60deg,
-    rgb(0, 177, 0) 60deg 120deg,
-    rgb(0, 195, 255) 120deg 180deg,
-    rgb(255, 217, 0) 180deg 240deg,
-    rgb(0, 195, 255) 240deg 300deg,
-    rgb(255, 165, 0) 300deg 360deg
-  );
+  background: conic-gradient(rgb(255, 64, 64) 0deg 60deg,
+      rgb(0, 177, 0) 60deg 120deg,
+      rgb(0, 195, 255) 120deg 180deg,
+      rgb(255, 217, 0) 180deg 240deg,
+      rgb(0, 195, 255) 240deg 300deg,
+      rgb(255, 165, 0) 300deg 360deg);
   border: 1px solid #3a3a3a;
 }
 
@@ -910,11 +922,11 @@ html, body {
   border-radius: 50%;
 }
 
-.customize-toggle input:checked + .customize-toggle-slider {
+.customize-toggle input:checked+.customize-toggle-slider {
   background-color: #2563eb;
 }
 
-.customize-toggle input:checked + .customize-toggle-slider:before {
+.customize-toggle input:checked+.customize-toggle-slider:before {
   transform: translateX(20px);
 }
 
@@ -1042,7 +1054,38 @@ html, body {
   gap: 16px 24px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .main-content {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .wheel-container {
+    padding: 20px;
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+
+  .wheel-wrapper {
+    width: 90vw;
+    height: 90vw;
+  }
+
+  .right-sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #3a3a3a;
+    min-height: 500px;
+    height: auto;
+    overflow: visible;
+  }
+
   .customize-checkboxes-grid {
     grid-template-columns: 1fr;
   }
@@ -1077,7 +1120,9 @@ html, body {
 
 /* Responsive Design */
 @media (max-width: 992px) {
-  html, body {
+
+  html,
+  body {
     height: auto;
     overflow-y: auto;
   }

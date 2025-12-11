@@ -60,31 +60,31 @@ function App() {
       // Don't cancel if spinning animation is active
       return
     }
-    
+
     // Stop slow rotation when spinning, when winner is found, when pop-up is shown, or when frozen
     if (isSpinning || winner || showWinner || isFrozenRef.current) {
       return
     }
-    
+
     let lastTime = performance.now()
     const slowRotationFrameRef = { current: null }
-    
+
     const animateSlow = (currentTime) => {
       // Check if we should stop (conditions may have changed)
       if (isSpinning || winner || showWinner || isFrozenRef.current) {
         slowRotationFrameRef.current = null
         return
       }
-      
+
       const delta = currentTime - lastTime
       lastTime = currentTime
-      
+
       // Update finalRotation smoothly (1.5 degrees per 50ms = 30 degrees per second)
       setFinalRotation(prev => (prev + (1.5 * delta / 50)) % 360)
-      
+
       slowRotationFrameRef.current = requestAnimationFrame(animateSlow)
     }
-    
+
     slowRotationFrameRef.current = requestAnimationFrame(animateSlow)
     return () => {
       if (slowRotationFrameRef.current) {
@@ -98,7 +98,7 @@ function App() {
   const handleNamesTextChange = (e) => {
     const text = e.target.value
     setNamesText(text)
-    
+
     // Parse textarea content into names array (split by newlines, filter empty lines)
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0)
     setNames(lines)
@@ -130,41 +130,41 @@ function App() {
 
   const spinWheel = useCallback(() => {
     if (isSpinning || names.length === 0) return
-    
+
     // Cancel any existing animation
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
     }
-    
+
     // Clear frozen state when starting new spin
     isFrozenRef.current = false
     animationCompletedRef.current = false
     winnerProcessedRef.current = false
-    
+
     setIsSpinning(true)
-    
+
     // Get current rotation - this is the ONLY rotation value
     const startRotation = finalRotation
-    
+
     // Base spin speed (degrees per second) for calculating total rotation
-    const baseSpeed = 720 // 2 full rotations per second
-    
+    const baseSpeed = 2160 // 6 full rotations per second - Major difference!
+
     // Duration is exactly what the user sets (in seconds)
     const duration = settings.spinTime * 1000 // Convert to milliseconds
-    
+
     // Calculate total rotation based on base speed and duration
     // Total rotation = speed * time (in seconds)
     const totalRotationDegrees = baseSpeed * settings.spinTime
-    
+
     // Add random angle for unpredictability (0-360 degrees)
     const randomAngle = Math.random() * 360
-    
+
     // Final rotation = start + total rotation + random angle
     const endRotation = startRotation + totalRotationDegrees + randomAngle
-    
+
     const startTime = performance.now()
-    
+
     // Easing function: starts just a tiny bit slower, then fast, then slows down dramatically
     // This creates the effect: slight acceleration at start, fast spin, very gradual slowdown at the end
     const ease = (t) => {
@@ -172,7 +172,7 @@ function App() {
       // Power of 4 gives slightly gentler start than power of 5, but still strong deceleration
       return 1 - Math.pow(1 - t, 4)
     }
-    
+
     const animate = () => {
       // Prevent any further execution if already completed
       if (animationCompletedRef.current) {
@@ -182,10 +182,10 @@ function App() {
         }
         return
       }
-      
+
       const elapsed = performance.now() - startTime
       const progress = Math.min(elapsed / duration, 1)
-      
+
       if (progress < 1) {
         // Check again if completed
         if (animationCompletedRef.current) {
@@ -200,107 +200,107 @@ function App() {
       } else {
         // Animation complete - stop IMMEDIATELY at exact target
         animationCompletedRef.current = true
-        
+
         // Cancel animation frame immediately
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current)
           animationFrameRef.current = null
         }
-        
+
         // Set to EXACT endRotation - freeze immediately
         setFinalRotation(endRotation)
         isFrozenRef.current = true
-        
+
         // Only process winner once
         if (!winnerProcessedRef.current) {
           winnerProcessedRef.current = true
-          
+
           // Calculate winner using the EXACT final rotation value
           const frozenRot = endRotation
-            const sliceAngle = 360 / names.length
-            
-            // The pointer is fixed at 0° (right side, pointing to the right)
-            // After the wheel rotates clockwise by R degrees, find which slice is at the pointer
-            
-            // Normalize rotation to 0-360 range
-            const R = ((frozenRot % 360) + 360) % 360
-            
-            // The pointer is at 0° (right side)
-            // After rotating clockwise by R degrees, what's at the pointer (0°) 
-            // was originally at (-R) degrees in the wheel's coordinate system
-            // Convert to 0-360 range: (360 - R) % 360
-            const pointerAngleInOriginal = (360 - R) % 360
-            
-            // Find which slice contains this angle
-            // Slices start at -90° (top), so slice i covers:
-            // from (i * sliceAngle - 90) to ((i+1) * sliceAngle - 90)
-            let selectedIndex = 0
-            let found = false
-            
-            for (let i = 0; i < names.length; i++) {
-              // Calculate slice boundaries in original coordinates (0-360 range)
-              const sliceStart = (i * sliceAngle - 90 + 360) % 360
-              const sliceEnd = ((i + 1) * sliceAngle - 90 + 360) % 360
-              
-              // Check if pointer angle is within this slice
-              let inSlice = false
-              
-              if (sliceStart < sliceEnd) {
-                // Normal case: slice doesn't wrap around 0°
-                inSlice = pointerAngleInOriginal >= sliceStart && pointerAngleInOriginal < sliceEnd
-              } else {
-                // Wrap-around case: slice crosses 0° boundary (e.g., 315° to 45°)
-                inSlice = pointerAngleInOriginal >= sliceStart || pointerAngleInOriginal < sliceEnd
-              }
-              
-              if (inSlice) {
-                selectedIndex = i
-                found = true
-                break
-              }
+          const sliceAngle = 360 / names.length
+
+          // The pointer is fixed at 0° (right side, pointing to the right)
+          // After the wheel rotates clockwise by R degrees, find which slice is at the pointer
+
+          // Normalize rotation to 0-360 range
+          const R = ((frozenRot % 360) + 360) % 360
+
+          // The pointer is at 0° (right side)
+          // After rotating clockwise by R degrees, what's at the pointer (0°) 
+          // was originally at (-R) degrees in the wheel's coordinate system
+          // Convert to 0-360 range: (360 - R) % 360
+          const pointerAngleInOriginal = (360 - R) % 360
+
+          // Find which slice contains this angle
+          // Slices start at -90° (top), so slice i covers:
+          // from (i * sliceAngle - 90) to ((i+1) * sliceAngle - 90)
+          let selectedIndex = 0
+          let found = false
+
+          for (let i = 0; i < names.length; i++) {
+            // Calculate slice boundaries in original coordinates (0-360 range)
+            const sliceStart = (i * sliceAngle - 90 + 360) % 360
+            const sliceEnd = ((i + 1) * sliceAngle - 90 + 360) % 360
+
+            // Check if pointer angle is within this slice
+            let inSlice = false
+
+            if (sliceStart < sliceEnd) {
+              // Normal case: slice doesn't wrap around 0°
+              inSlice = pointerAngleInOriginal >= sliceStart && pointerAngleInOriginal < sliceEnd
+            } else {
+              // Wrap-around case: slice crosses 0° boundary (e.g., 315° to 45°)
+              inSlice = pointerAngleInOriginal >= sliceStart || pointerAngleInOriginal < sliceEnd
             }
-            
-            // Fallback: if no slice found (shouldn't happen), find closest slice center
-            if (!found) {
-              let minDist = Infinity
-              for (let i = 0; i < names.length; i++) {
-                const sliceCenter = (i * sliceAngle - 90 + sliceAngle / 2 + 360) % 360
-                let dist = Math.abs(pointerAngleInOriginal - sliceCenter)
-                if (dist > 180) dist = 360 - dist
-                if (dist < minDist) {
-                  minDist = dist
-                  selectedIndex = i
-                }
-              }
+
+            if (inSlice) {
+              selectedIndex = i
+              found = true
+              break
             }
-            
-            // Ensure valid index
-            selectedIndex = selectedIndex % names.length
-            if (selectedIndex < 0) {
-              selectedIndex = (selectedIndex + names.length) % names.length
-            }
-            
-            const winnerName = names[selectedIndex]
-            const winnerColor = colors[selectedIndex % colors.length]
-            
-            // Set winner and stop spinning
-            setWinner({ name: winnerName, color: winnerColor, index: selectedIndex })
-            setIsSpinning(false)
-            
-            // Reset ref after processing
-            winnerProcessedRef.current = false
-            
-            // Wait 1 second after wheel stops, then show pop-up
-            // Wheel remains frozen during this time and until pop-up is closed
-            setTimeout(() => {
-              setShowWinner(true)
-            }, 1000)
           }
+
+          // Fallback: if no slice found (shouldn't happen), find closest slice center
+          if (!found) {
+            let minDist = Infinity
+            for (let i = 0; i < names.length; i++) {
+              const sliceCenter = (i * sliceAngle - 90 + sliceAngle / 2 + 360) % 360
+              let dist = Math.abs(pointerAngleInOriginal - sliceCenter)
+              if (dist > 180) dist = 360 - dist
+              if (dist < minDist) {
+                minDist = dist
+                selectedIndex = i
+              }
+            }
+          }
+
+          // Ensure valid index
+          selectedIndex = selectedIndex % names.length
+          if (selectedIndex < 0) {
+            selectedIndex = (selectedIndex + names.length) % names.length
+          }
+
+          const winnerName = names[selectedIndex]
+          const winnerColor = colors[selectedIndex % colors.length]
+
+          // Set winner and stop spinning
+          setWinner({ name: winnerName, color: winnerColor, index: selectedIndex })
+          setIsSpinning(false)
+
+          // Reset ref after processing
+          winnerProcessedRef.current = false
+
+          // Wait 1 second after wheel stops, then show pop-up
+          // Wheel remains frozen during this time and until pop-up is closed
+          setTimeout(() => {
+            setShowWinner(true)
+          }, 1000)
         }
       }
-      
-      // Start animation immediately
-      animationFrameRef.current = requestAnimationFrame(animate)
+    }
+
+    // Start animation immediately
+    animationFrameRef.current = requestAnimationFrame(animate)
   }, [isSpinning, names, finalRotation, settings.spinTime])
 
   const handleWheelClick = () => {
@@ -322,7 +322,7 @@ function App() {
       const lines = namesText.split('\n').filter(line => line.trim() !== winner.name)
       setNamesText(lines.join('\n'))
       setNames(names.filter(name => name !== winner.name))
-      
+
       setShowWinner(false)
       // Unfreeze wheel - slow rotation can resume
       isFrozenRef.current = false
@@ -380,15 +380,15 @@ function App() {
           </button>
           <div className="wheel-container-fullscreen">
             <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
-              <svg 
-                className="wheel" 
+              <svg
+                className="wheel"
                 viewBox="0 0 750 750"
                 ref={wheelRef}
                 style={{ transform: `rotate(${finalRotation}deg)` }}
               >
                 <defs>
                   <filter id="shadow">
-                    <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3"/>
+                    <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3" />
                   </filter>
                 </defs>
                 {names.map((name, index) => {
@@ -396,29 +396,29 @@ function App() {
                   const startAngle = (index * angle - 90) * (Math.PI / 180)
                   const endAngle = ((index + 1) * angle - 90) * (Math.PI / 180)
                   const largeArc = angle > 180 ? 1 : 0
-                  
-                  const x1 = 375 + 340 * Math.cos(startAngle)
-                  const y1 = 375 + 340 * Math.sin(startAngle)
-                  const x2 = 375 + 340 * Math.cos(endAngle)
-                  const y2 = 375 + 340 * Math.sin(endAngle)
-                  
-                  const path = `M 375 375 L ${x1} ${y1} A 340 340 0 ${largeArc} 1 ${x2} ${y2} Z`
-                  
+
+                  const x1 = 375 + 315 * Math.cos(startAngle)
+                  const y1 = 375 + 315 * Math.sin(startAngle)
+                  const x2 = 375 + 315 * Math.cos(endAngle)
+                  const y2 = 375 + 315 * Math.sin(endAngle)
+
+                  const path = `M 375 375 L ${x1} ${y1} A 315 315 0 ${largeArc} 1 ${x2} ${y2} Z`
+
                   const midAngle = (startAngle + endAngle) / 2
                   const innerRadius = 120
-                  const outerRadius = 280
+                  const outerRadius = 255
                   const textRadius = outerRadius - 10
                   const textX = 375 + textRadius * Math.cos(midAngle)
                   const textY = 375 + textRadius * Math.sin(midAngle)
                   const textRotationDeg = (midAngle * 180 / Math.PI)
-                  
+
                   // Calculate dynamic font size based on slice size (angle)
                   // Larger slices get larger font, smaller slices get smaller font
                   // Scale down more gradually - keep larger font size longer
                   const arcLength = textRadius * angle * (Math.PI / 180)
                   // Use a larger divisor to keep font size larger longer, only scale down for many entries
                   const fontSize = Math.max(16, Math.min(36, arcLength / 10))
-                  
+
                   return (
                     <g key={index}>
                       <path
@@ -436,7 +436,7 @@ function App() {
                         textAnchor="middle"
                         dominantBaseline="middle"
                         transform={`rotate(${textRotationDeg} ${textX} ${textY})`}
-                        style={{ 
+                        style={{
                           whiteSpace: 'nowrap',
                           letterSpacing: '0.5px'
                         }}
@@ -446,11 +446,11 @@ function App() {
                     </g>
                   )
                 })}
-                <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)"/>
+                <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)" />
               </svg>
               {/* Fixed arc text overlay - doesn't rotate */}
               {!isSpinning && !showWinner && !winner && (
-                <svg 
+                <svg
                   className="wheel-text-overlay"
                   viewBox="0 0 750 750"
                   style={{
@@ -502,7 +502,45 @@ function App() {
                   </text>
                 </svg>
               )}
-              <div className="wheel-pointer"></div>
+              {/* Golden 3D Pointer for Fullscreen */}
+              <svg
+                className="wheel-pointer"
+                viewBox="0 0 100 100"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  position: 'absolute',
+                  right: 'calc(8% - 54px)', /* Dynamic calculation to touch wheel edge exactly */
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '60px',
+                  height: '60px',
+                  zIndex: 20,
+                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
+                  pointerEvents: 'none'
+                }}
+              >
+                <defs>
+                  <linearGradient id="goldGradientFS" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FFF7CC" />
+                    <stop offset="40%" stopColor="#FFD700" />
+                    <stop offset="60%" stopColor="#B8860B" />
+                    <stop offset="100%" stopColor="#DAA520" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 10 50 L 90 20 L 90 80 Z"
+                  fill="url(#goldGradientFS)"
+                  stroke="#B8860B"
+                  strokeWidth="2"
+                  filter="url(#bevel)"
+                />
+                <path
+                  d="M 15 50 L 85 24 L 85 76 Z"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.4)"
+                  strokeWidth="2"
+                />
+              </svg>
             </div>
           </div>
         </div>
@@ -559,15 +597,15 @@ function App() {
         {/* Center - Wheel */}
         <div className="wheel-container">
           <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
-            <svg 
-              className="wheel" 
+            <svg
+              className="wheel"
               viewBox="0 0 750 750"
               ref={wheelRef}
               style={{ transform: `rotate(${finalRotation}deg)` }}
             >
               <defs>
                 <filter id="shadow">
-                  <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3"/>
+                  <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3" />
                 </filter>
               </defs>
               {names.map((name, index) => {
@@ -575,38 +613,38 @@ function App() {
                 const startAngle = (index * angle - 90) * (Math.PI / 180)
                 const endAngle = ((index + 1) * angle - 90) * (Math.PI / 180)
                 const largeArc = angle > 180 ? 1 : 0
-                
-                const x1 = 375 + 340 * Math.cos(startAngle)
-                const y1 = 375 + 340 * Math.sin(startAngle)
-                const x2 = 375 + 340 * Math.cos(endAngle)
-                const y2 = 375 + 340 * Math.sin(endAngle)
-                
-                const path = `M 375 375 L ${x1} ${y1} A 340 340 0 ${largeArc} 1 ${x2} ${y2} Z`
-                
+
+                const x1 = 375 + 315 * Math.cos(startAngle)
+                const y1 = 375 + 315 * Math.sin(startAngle)
+                const x2 = 375 + 315 * Math.cos(endAngle)
+                const y2 = 375 + 315 * Math.sin(endAngle)
+
+                const path = `M 375 375 L ${x1} ${y1} A 315 315 0 ${largeArc} 1 ${x2} ${y2} Z`
+
                 // Calculate middle angle for text positioning
                 const midAngle = (startAngle + endAngle) / 2
-                
+
                 // Position text along the radial direction (from inner to outer)
                 // Text should be horizontal along the slice length
                 const innerRadius = 120
-                const outerRadius = 280
+                const outerRadius = 255
                 const textRadius = outerRadius - 10
-                
+
                 // Calculate text position at outer radius of slice
                 const textX = 375 + textRadius * Math.cos(midAngle)
                 const textY = 375 + textRadius * Math.sin(midAngle)
-                
+
                 // Rotate text to align with the slice direction (radial, from center outward)
                 // Text should be horizontal along the slice length
                 const textRotationDeg = (midAngle * 180 / Math.PI)
-                
+
                 // Calculate dynamic font size based on slice size (angle)
                 // Larger slices get larger font, smaller slices get smaller font
                 // Scale down more gradually - keep larger font size longer
                 const arcLength = textRadius * angle * (Math.PI / 180)
                 // Use a larger divisor to keep font size larger longer, only scale down for many entries
                 const fontSize = Math.max(18, Math.min(36, arcLength / 8))
-                
+
                 return (
                   <g key={index}>
                     <path
@@ -624,7 +662,7 @@ function App() {
                       textAnchor="middle"
                       dominantBaseline="middle"
                       transform={`rotate(${textRotationDeg} ${textX} ${textY})`}
-                      style={{ 
+                      style={{
                         whiteSpace: 'nowrap',
                         letterSpacing: '0.5px'
                       }}
@@ -634,11 +672,11 @@ function App() {
                   </g>
                 )
               })}
-              <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)"/>
+              <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)" />
             </svg>
             {/* Fixed arc text overlay - doesn't rotate */}
             {!isSpinning && !showWinner && !winner && (
-              <svg 
+              <svg
                 className="wheel-text-overlay"
                 viewBox="0 0 750 750"
                 style={{
@@ -690,7 +728,60 @@ function App() {
                 </text>
               </svg>
             )}
-            <div className="wheel-pointer"></div>
+            {/* Golden 3D Pointer */}
+            <svg
+              className="wheel-pointer"
+              viewBox="0 0 100 100"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{
+                position: 'absolute',
+                right: 'calc(8% - 54px)', /* Dynamic calculation to touch wheel edge exactly */
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '60px', /* Increased size for visibility */
+                height: '60px',
+                zIndex: 20, /* Ensure it's on top */
+                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))', /* 3D shadow effect */
+                pointerEvents: 'none' /* Passthrough clicks */
+              }}
+            >
+              <defs>
+                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FFF7CC" />
+                  <stop offset="40%" stopColor="#FFD700" />
+                  <stop offset="60%" stopColor="#B8860B" />
+                  <stop offset="100%" stopColor="#DAA520" />
+                </linearGradient>
+                <filter id="bevel" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
+                  <feOffset in="blur" dx="2" dy="2" result="offsetBlur" />
+                  <feSpecularLighting in="blur" surfaceScale="5" specularConstant=".75" specularExponent="20" lightingColor="#bbbbbb" result="specOut">
+                    <fePointLight x="-5000" y="-10000" z="20000" />
+                  </feSpecularLighting>
+                  <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut" />
+                  <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litPaint" />
+                  <feMerge>
+                    <feMergeNode in="offsetBlur" />
+                    <feMergeNode in="litPaint" />
+                  </feMerge>
+                </filter>
+              </defs>
+              {/* Main Arrow Body */}
+              <path
+                d="M 10 50 L 90 20 L 90 80 Z"
+                fill="url(#goldGradient)"
+                stroke="#B8860B"
+                strokeWidth="2"
+                filter="url(#bevel)"
+              />
+              {/* Highlight for extra 3D pop */}
+              <path
+                d="M 15 50 L 85 24 L 85 76 Z"
+                fill="none"
+                stroke="rgba(255,255,255,0.4)"
+                strokeWidth="2"
+              />
+            </svg>
           </div>
         </div>
 
@@ -699,8 +790,8 @@ function App() {
           {isSidebarHidden ? (
             <div className="sidebar-header-hidden">
               <label className="hide-checkbox">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={isSidebarHidden}
                   onChange={(e) => setIsSidebarHidden(e.target.checked)}
                 />
@@ -711,13 +802,13 @@ function App() {
             <>
               <div className="sidebar-header">
                 <div className="tabs">
-                  <button 
+                  <button
                     className={`tab ${activeTab === 'entries' ? 'active' : ''}`}
                     onClick={() => setActiveTab('entries')}
                   >
                     Entries {names.length}
                   </button>
-                  <button 
+                  <button
                     className={`tab ${activeTab === 'results' ? 'active' : ''}`}
                     onClick={() => setActiveTab('results')}
                   >
@@ -725,15 +816,15 @@ function App() {
                   </button>
                 </div>
                 <label className="hide-checkbox">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={isSidebarHidden}
                     onChange={(e) => setIsSidebarHidden(e.target.checked)}
                   />
                   <span>Hide</span>
                 </label>
               </div>
-              
+
               {activeTab === 'entries' ? (
                 <>
                   <div className="sidebar-actions">
@@ -753,8 +844,8 @@ function App() {
                       <FiChevronDown className="icon" />
                     </button>
                     <label className="advanced-checkbox">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={showAdvanced}
                         onChange={(e) => setShowAdvanced(e.target.checked)}
                       />
@@ -844,19 +935,19 @@ function App() {
         <div className="customize-overlay" onClick={() => setShowCustomize(false)}>
           <div className="customize-popup" onClick={(e) => e.stopPropagation()}>
             <div className="customize-tabs">
-              <button 
+              <button
                 className={`customize-tab ${customizeTab === 'during-spin' ? 'active' : ''}`}
                 onClick={() => setCustomizeTab('during-spin')}
               >
                 During spin
               </button>
-              <button 
+              <button
                 className={`customize-tab ${customizeTab === 'after-spin' ? 'active' : ''}`}
                 onClick={() => setCustomizeTab('after-spin')}
               >
                 After spin
               </button>
-              <button 
+              <button
                 className={`customize-tab ${customizeTab === 'appearance' ? 'active' : ''}`}
                 onClick={() => setCustomizeTab('appearance')}
               >
@@ -870,10 +961,10 @@ function App() {
                   <div className="customize-field">
                     <label className="customize-label">Sound</label>
                     <div className="customize-sound-controls">
-                      <select 
+                      <select
                         className="customize-select"
                         value={settings.sound}
-                        onChange={(e) => setSettings({...settings, sound: e.target.value})}
+                        onChange={(e) => setSettings({ ...settings, sound: e.target.value })}
                       >
                         <option>Ticking sound</option>
                       </select>
@@ -888,15 +979,15 @@ function App() {
 
                   <div className="customize-field">
                     <label className="customize-label">Volume</label>
-                    <div className="customize-slider-container" style={{'--slider-progress': `${settings.volume}%`}}>
+                    <div className="customize-slider-container" style={{ '--slider-progress': `${settings.volume}%` }}>
                       <input
                         type="range"
                         min="0"
                         max="100"
                         value={settings.volume}
-                        onChange={(e) => setSettings({...settings, volume: parseInt(e.target.value)})}
+                        onChange={(e) => setSettings({ ...settings, volume: parseInt(e.target.value) })}
                         className="customize-slider"
-                        style={{'--slider-progress': `${settings.volume}%`}}
+                        style={{ '--slider-progress': `${settings.volume}%` }}
                       />
                       <div className="customize-slider-labels">
                         <span>0%</span>
@@ -913,7 +1004,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.displayDuplicates}
-                        onChange={(e) => setSettings({...settings, displayDuplicates: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, displayDuplicates: e.target.checked })}
                       />
                       <span>Display duplicates</span>
                       <FiHelpCircle className="customize-help-icon" />
@@ -922,7 +1013,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.spinSlowly}
-                        onChange={(e) => setSettings({...settings, spinSlowly: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, spinSlowly: e.target.checked })}
                       />
                       <span>Spin slowly</span>
                     </label>
@@ -930,7 +1021,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.showTitle}
-                        onChange={(e) => setSettings({...settings, showTitle: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, showTitle: e.target.checked })}
                       />
                       <span>Show title</span>
                     </label>
@@ -938,15 +1029,15 @@ function App() {
 
                   <div className="customize-field">
                     <label className="customize-label">Spin time (seconds)</label>
-                    <div className="customize-slider-container" style={{'--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%`}}>
+                    <div className="customize-slider-container" style={{ '--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%` }}>
                       <input
                         type="range"
                         min="1"
                         max="60"
                         value={settings.spinTime}
-                        onChange={(e) => setSettings({...settings, spinTime: parseInt(e.target.value)})}
+                        onChange={(e) => setSettings({ ...settings, spinTime: parseInt(e.target.value) })}
                         className="customize-slider"
-                        style={{'--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%`}}
+                        style={{ '--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%` }}
                       />
                       <div className="customize-slider-labels">
                         <span>1</span>
@@ -963,15 +1054,15 @@ function App() {
                   <div className="customize-field">
                     <label className="customize-label-bold">Max number of names visible on the wheel</label>
                     <p className="customize-description">All names in the text-box have the same chance of winning, regardless of this value.</p>
-                    <div className="customize-slider-container" style={{'--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%`}}>
+                    <div className="customize-slider-container" style={{ '--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%` }}>
                       <input
                         type="range"
                         min="4"
                         max="1000"
                         value={settings.maxNamesVisible}
-                        onChange={(e) => setSettings({...settings, maxNamesVisible: parseInt(e.target.value)})}
+                        onChange={(e) => setSettings({ ...settings, maxNamesVisible: parseInt(e.target.value) })}
                         className="customize-slider"
-                        style={{'--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%`}}
+                        style={{ '--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%` }}
                       />
                       <div className="customize-slider-labels">
                         <span>4</span>
@@ -996,10 +1087,10 @@ function App() {
                   <div className="customize-field">
                     <label className="customize-label">Sound</label>
                     <div className="customize-sound-controls">
-                      <select 
+                      <select
                         className="customize-select"
                         value={settings.afterSpinSound}
-                        onChange={(e) => setSettings({...settings, afterSpinSound: e.target.value})}
+                        onChange={(e) => setSettings({ ...settings, afterSpinSound: e.target.value })}
                       >
                         <option>Subdued applause</option>
                       </select>
@@ -1014,15 +1105,15 @@ function App() {
 
                   <div className="customize-field">
                     <label className="customize-label">Volume</label>
-                    <div className="customize-slider-container" style={{'--slider-progress': `${settings.afterSpinVolume}%`}}>
+                    <div className="customize-slider-container" style={{ '--slider-progress': `${settings.afterSpinVolume}%` }}>
                       <input
                         type="range"
                         min="0"
                         max="100"
                         value={settings.afterSpinVolume}
-                        onChange={(e) => setSettings({...settings, afterSpinVolume: parseInt(e.target.value)})}
+                        onChange={(e) => setSettings({ ...settings, afterSpinVolume: parseInt(e.target.value) })}
                         className="customize-slider"
-                        style={{'--slider-progress': `${settings.afterSpinVolume}%`}}
+                        style={{ '--slider-progress': `${settings.afterSpinVolume}%` }}
                       />
                       <div className="customize-slider-labels">
                         <span>0%</span>
@@ -1039,7 +1130,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.animateWinningEntry}
-                        onChange={(e) => setSettings({...settings, animateWinningEntry: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, animateWinningEntry: e.target.checked })}
                       />
                       <span>Animate winning entry</span>
                     </label>
@@ -1047,7 +1138,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.launchConfetti}
-                        onChange={(e) => setSettings({...settings, launchConfetti: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, launchConfetti: e.target.checked })}
                       />
                       <span>Launch confetti</span>
                     </label>
@@ -1055,7 +1146,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.autoRemoveWinner}
-                        onChange={(e) => setSettings({...settings, autoRemoveWinner: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, autoRemoveWinner: e.target.checked })}
                       />
                       <span>Auto-remove winner after 5 seconds</span>
                     </label>
@@ -1066,7 +1157,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.displayPopup}
-                        onChange={(e) => setSettings({...settings, displayPopup: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, displayPopup: e.target.checked })}
                       />
                       <span>Display popup with message:</span>
                     </label>
@@ -1074,7 +1165,7 @@ function App() {
                       type="text"
                       className="customize-text-input"
                       value={settings.popupMessage}
-                      onChange={(e) => setSettings({...settings, popupMessage: e.target.value})}
+                      onChange={(e) => setSettings({ ...settings, popupMessage: e.target.value })}
                       disabled={!settings.displayPopup}
                     />
                     <div className="customize-indented-checkbox">
@@ -1082,7 +1173,7 @@ function App() {
                         <input
                           type="checkbox"
                           checked={settings.displayRemoveButton}
-                          onChange={(e) => setSettings({...settings, displayRemoveButton: e.target.checked})}
+                          onChange={(e) => setSettings({ ...settings, displayRemoveButton: e.target.checked })}
                           disabled={!settings.displayPopup}
                         />
                         <span>Display the "Remove" button</span>
@@ -1095,7 +1186,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.playClickSoundOnRemove}
-                        onChange={(e) => setSettings({...settings, playClickSoundOnRemove: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, playClickSoundOnRemove: e.target.checked })}
                       />
                       <span>Play a click sound when the winner is removed</span>
                     </label>
@@ -1109,12 +1200,12 @@ function App() {
                     <div className="customize-toggle-container">
                       <div className={`customize-toggle-option ${!settings.wheelBackgroundImage ? 'active' : ''}`}>
                         <div className="customize-option-icon customize-wheel-icon">
-                          <div className="wheel-icon-slice" style={{backgroundColor: 'rgb(255, 64, 64)'}}></div>
-                          <div className="wheel-icon-slice" style={{backgroundColor: 'rgb(0, 177, 0)'}}></div>
-                          <div className="wheel-icon-slice" style={{backgroundColor: 'rgb(0, 195, 255)'}}></div>
-                          <div className="wheel-icon-slice" style={{backgroundColor: 'rgb(255, 217, 0)'}}></div>
-                          <div className="wheel-icon-slice" style={{backgroundColor: 'rgb(0, 195, 255)'}}></div>
-                          <div className="wheel-icon-slice" style={{backgroundColor: 'rgb(255, 165, 0)'}}></div>
+                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 64, 64)' }}></div>
+                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 177, 0)' }}></div>
+                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 195, 255)' }}></div>
+                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 217, 0)' }}></div>
+                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 195, 255)' }}></div>
+                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 165, 0)' }}></div>
                         </div>
                         <span className="customize-option-text">One color per section</span>
                       </div>
@@ -1122,7 +1213,7 @@ function App() {
                         <input
                           type="checkbox"
                           checked={settings.wheelBackgroundImage}
-                          onChange={(e) => setSettings({...settings, wheelBackgroundImage: e.target.checked})}
+                          onChange={(e) => setSettings({ ...settings, wheelBackgroundImage: e.target.checked })}
                         />
                         <span className="customize-toggle-slider"></span>
                       </label>
@@ -1171,7 +1262,7 @@ function App() {
                               onChange={(e) => {
                                 const newPalettes = [...settings.colorPalettes]
                                 newPalettes[index] = e.target.checked
-                                setSettings({...settings, colorPalettes: newPalettes})
+                                setSettings({ ...settings, colorPalettes: newPalettes })
                               }}
                             />
                           </label>
@@ -1190,10 +1281,10 @@ function App() {
 
                   <div className="customize-field">
                     <label className="customize-label">Image size</label>
-                    <select 
+                    <select
                       className="customize-select"
                       value={settings.imageSize}
-                      onChange={(e) => setSettings({...settings, imageSize: e.target.value})}
+                      onChange={(e) => setSettings({ ...settings, imageSize: e.target.value })}
                     >
                       <option>S</option>
                       <option>M</option>
@@ -1207,7 +1298,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.pageBackgroundColor}
-                        onChange={(e) => setSettings({...settings, pageBackgroundColor: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, pageBackgroundColor: e.target.checked })}
                       />
                       <span>Page background color</span>
                     </label>
@@ -1215,7 +1306,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.contours}
-                        onChange={(e) => setSettings({...settings, contours: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, contours: e.target.checked })}
                       />
                       <span>Contours</span>
                     </label>
@@ -1223,7 +1314,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.displayColorGradient}
-                        onChange={(e) => setSettings({...settings, displayColorGradient: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, displayColorGradient: e.target.checked })}
                       />
                       <span>Display a color gradient on the page</span>
                     </label>
@@ -1231,7 +1322,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.wheelShadow}
-                        onChange={(e) => setSettings({...settings, wheelShadow: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, wheelShadow: e.target.checked })}
                       />
                       <span>Wheel shadow</span>
                     </label>
@@ -1239,7 +1330,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={settings.pointerChangesColor}
-                        onChange={(e) => setSettings({...settings, pointerChangesColor: e.target.checked})}
+                        onChange={(e) => setSettings({ ...settings, pointerChangesColor: e.target.checked })}
                       />
                       <span>Pointer changes color</span>
                     </label>
