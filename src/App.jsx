@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import confetti from 'canvas-confetti'
 import { FiSettings, FiFile, FiFolder, FiSave, FiShare2, FiSearch, FiMaximize, FiChevronDown, FiGlobe, FiShuffle, FiArrowUp, FiArrowDown, FiPlay, FiSquare, FiHelpCircle, FiImage, FiDroplet } from 'react-icons/fi'
 import './App.css'
+import CanvasWheel from './components/CanvasWheel'
 
 function App() {
   const [names, setNames] = useState([
@@ -238,15 +239,14 @@ function App() {
     const startRotation = finalRotation
     let lastTickRotation = startRotation // Track last rotation for sound sync
 
-    // Base spin speed (degrees per second) for calculating total rotation
-    const baseSpeed = 7200 // Maximum Velocity! 20 rotations/sec
+    // Duration: 6000ms as requested for "increase some more time"
+    const duration = 6000
 
-    // Duration is exactly what the user sets (in seconds)
-    const duration = settings.spinTime * 1000 // Convert to milliseconds
-
-    // Calculate total rotation based on base speed and duration
-    // Total rotation = speed * time (in seconds)
-    const totalRotationDegrees = baseSpeed * settings.spinTime
+    // Calculate total rotation: 5-8 full rotations (1800-2880 degrees)
+    const minRotations = 5
+    const maxRotations = 8
+    const spins = minRotations + Math.random() * (maxRotations - minRotations)
+    const totalRotationDegrees = spins * 360
 
     // Add random angle for unpredictability (0-360 degrees)
     const randomAngle = Math.random() * 360
@@ -256,12 +256,17 @@ function App() {
 
     const startTime = performance.now()
 
-    // Easing function: starts just a tiny bit slower, then fast, then slows down dramatically
-    // This creates the effect: slight acceleration at start, fast spin, very gradual slowdown at the end
+    // Easing function: Ease-In-Out Cubic
+    // "Motor start" effect: Accelerate (slowly start), fast spin, then decelerate (slow stop)
     const ease = (t) => {
-      // Ease-out quartic: starts just a pinch slower than quintic, still has dramatic slowdown at end
-      // Power of 4 gives slightly gentler start than power of 5, but still strong deceleration
-      return 1 - Math.pow(1 - t, 4)
+      // t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+      // This creates a symmetrical S-curve: 
+      // First 50% of time: Accelerate from 0 to Max Speed
+      // Last 50% of time: Decelerate from Max Speed to 0
+      // Actually, for a spin wheel, we want a SHORT acceleration and LONG deceleration.
+      // But standard easeInOut is typically symmetric. 
+      // Let's use standard symmetric easeInOutCubic for the requested "Slow start -> Fast -> Slow stop"
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
     }
 
     const animate = () => {
@@ -524,73 +529,15 @@ function App() {
           </button>
           <div className="wheel-container-fullscreen">
             <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
-              <svg
-                className="wheel"
-                viewBox="0 0 750 750"
-                ref={wheelRef}
-                style={{ transform: `rotate(${finalRotation}deg)` }}
-              >
-                <defs>
-                  <filter id="shadow">
-                    <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3" />
-                  </filter>
-                </defs>
-                {names.map((name, index) => {
-                  const angle = (360 / names.length)
-                  const startAngle = (index * angle - 90) * (Math.PI / 180)
-                  const endAngle = ((index + 1) * angle - 90) * (Math.PI / 180)
-                  const largeArc = angle > 180 ? 1 : 0
-
-                  const x1 = 375 + 315 * Math.cos(startAngle)
-                  const y1 = 375 + 315 * Math.sin(startAngle)
-                  const x2 = 375 + 315 * Math.cos(endAngle)
-                  const y2 = 375 + 315 * Math.sin(endAngle)
-
-                  const path = `M 375 375 L ${x1} ${y1} A 315 315 0 ${largeArc} 1 ${x2} ${y2} Z`
-
-                  const midAngle = (startAngle + endAngle) / 2
-                  const innerRadius = 120
-                  const outerRadius = 255
-                  const textRadius = outerRadius - 10
-                  const textX = 375 + textRadius * Math.cos(midAngle)
-                  const textY = 375 + textRadius * Math.sin(midAngle)
-                  const textRotationDeg = (midAngle * 180 / Math.PI)
-
-                  // Calculate dynamic font size based on slice size (angle)
-                  // Significantly increased font sizes for better visibility on all devices
-                  const arcLength = textRadius * angle * (Math.PI / 180)
-                  // Min 24px, Max 52px (was 16/36) - Much larger text
-                  const fontSize = Math.max(24, Math.min(52, arcLength / 6))
-
-                  return (
-                    <g key={index}>
-                      <path
-                        d={path}
-                        fill={colors[index % colors.length]}
-                        stroke="black"
-                        strokeWidth="0.5"
-                      />
-                      <text
-                        x={textX}
-                        y={textY}
-                        fill={getTextColor(colors[index % colors.length])}
-                        fontSize={fontSize}
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        transform={`rotate(${textRotationDeg} ${textX} ${textY})`}
-                        style={{
-                          whiteSpace: 'nowrap',
-                          letterSpacing: '0.5px'
-                        }}
-                      >
-                        {name}
-                      </text>
-                    </g>
-                  )
-                })}
-                <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)" />
-              </svg>
+              <div style={{ width: '100%', height: '100%' }}>
+                <CanvasWheel
+                  names={names}
+                  colors={colors}
+                  rotation={finalRotation}
+                  width={750}
+                  height={750}
+                />
+              </div>
               {/* Fixed arc text overlay - doesn't rotate */}
               {!isSpinning && !showWinner && !winner && (
                 <svg
@@ -739,82 +686,16 @@ function App() {
         {/* Center - Wheel */}
         <div className="wheel-container">
           <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
-            <svg
-              className="wheel"
-              viewBox="0 0 750 750"
-              ref={wheelRef}
-              style={{ transform: `rotate(${finalRotation}deg)` }}
-            >
-              <defs>
-                <filter id="shadow">
-                  <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3" />
-                </filter>
-              </defs>
-              {names.map((name, index) => {
-                const angle = (360 / names.length)
-                const startAngle = (index * angle - 90) * (Math.PI / 180)
-                const endAngle = ((index + 1) * angle - 90) * (Math.PI / 180)
-                const largeArc = angle > 180 ? 1 : 0
+            <div style={{ width: '100%', height: '100%' }}>
+              <CanvasWheel
+                names={names}
+                colors={colors}
+                rotation={finalRotation}
+                width={750}
+                height={750}
+              />
+            </div>
 
-                const x1 = 375 + 315 * Math.cos(startAngle)
-                const y1 = 375 + 315 * Math.sin(startAngle)
-                const x2 = 375 + 315 * Math.cos(endAngle)
-                const y2 = 375 + 315 * Math.sin(endAngle)
-
-                const path = `M 375 375 L ${x1} ${y1} A 315 315 0 ${largeArc} 1 ${x2} ${y2} Z`
-
-                // Calculate middle angle for text positioning
-                const midAngle = (startAngle + endAngle) / 2
-
-                // Position text along the radial direction (from inner to outer)
-                // Text should be horizontal along the slice length
-                const innerRadius = 120
-                const outerRadius = 255
-                const textRadius = outerRadius - 10
-
-                // Calculate text position at outer radius of slice
-                const textX = 375 + textRadius * Math.cos(midAngle)
-                const textY = 375 + textRadius * Math.sin(midAngle)
-
-                // Rotate text to align with the slice direction (radial, from center outward)
-                // Text should be horizontal along the slice length
-                const textRotationDeg = (midAngle * 180 / Math.PI)
-
-                // Calculate dynamic font size based on slice size (angle)
-                // Significantly increased font sizes for better visibility on all devices
-                const arcLength = textRadius * angle * (Math.PI / 180)
-                // Min 24px, Max 52px (was 16/36) - Much larger text
-                const fontSize = Math.max(24, Math.min(52, arcLength / 6))
-
-                return (
-                  <g key={index}>
-                    <path
-                      d={path}
-                      fill={colors[index % colors.length]}
-                      stroke="black"
-                      strokeWidth="0.5"
-                    />
-                    <text
-                      x={textX}
-                      y={textY}
-                      fill={getTextColor(colors[index % colors.length])}
-                      fontSize={fontSize}
-                      fontWeight="bold"
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      transform={`rotate(${textRotationDeg} ${textX} ${textY})`}
-                      style={{
-                        whiteSpace: 'nowrap',
-                        letterSpacing: '0.5px'
-                      }}
-                    >
-                      {name}
-                    </text>
-                  </g>
-                )
-              })}
-              <circle cx="375" cy="375" r="55" fill="white" filter="url(#shadow)" />
-            </svg>
             {/* Fixed arc text overlay - doesn't rotate */}
             {!isSpinning && !showWinner && !winner && (
               <svg
@@ -923,38 +804,14 @@ function App() {
               />
             </svg>
           </div>
-        </div>
+        </div >
 
         {/* Right Sidebar - Entries */}
-        <div className={`right-sidebar ${isSidebarHidden ? 'sidebar-hidden' : ''}`}>
-          {isSidebarHidden ? (
-            <div className="sidebar-header-hidden">
-              <label className="hide-checkbox">
-                <input
-                  type="checkbox"
-                  checked={isSidebarHidden}
-                  onChange={(e) => setIsSidebarHidden(e.target.checked)}
-                />
-                <span>Hide</span>
-              </label>
-            </div>
-          ) : (
-            <>
-              <div className="sidebar-header">
-                <div className="tabs">
-                  <button
-                    className={`tab ${activeTab === 'entries' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('entries')}
-                  >
-                    Entries {names.length}
-                  </button>
-                  <button
-                    className={`tab ${activeTab === 'results' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('results')}
-                  >
-                    Results {results.length}
-                  </button>
-                </div>
+        < div className={`right-sidebar ${isSidebarHidden ? 'sidebar-hidden' : ''}`
+        }>
+          {
+            isSidebarHidden ? (
+              <div className="sidebar-header-hidden" >
                 <label className="hide-checkbox">
                   <input
                     type="checkbox"
@@ -964,533 +821,563 @@ function App() {
                   <span>Hide</span>
                 </label>
               </div>
-
-              {activeTab === 'entries' ? (
-                <>
-                  <div className="sidebar-actions">
-                    <button className="action-btn" onClick={shuffleNames} title="Shuffle">
-                      <FiShuffle className="icon" />
-                      <span>Shuffle</span>
+            ) : (
+              <>
+                <div className="sidebar-header">
+                  <div className="tabs">
+                    <button
+                      className={`tab ${activeTab === 'entries' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('entries')}
+                    >
+                      Entries {names.length}
                     </button>
-                    <button className="action-btn" onClick={sortNames} title="Sort">
-                      <span className="icon" style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.5' }}>
-                        <FiArrowUp style={{ fontSize: '10px' }} />
-                        <FiArrowDown style={{ fontSize: '10px' }} />
-                      </span>
-                      <span>Sort</span>
+                    <button
+                      className={`tab ${activeTab === 'results' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('results')}
+                    >
+                      Results {results.length}
                     </button>
-                    <button className="action-btn dropdown" title="Add image">
-                      <span>Add image</span>
-                      <FiChevronDown className="icon" />
-                    </button>
-                    <label className="advanced-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={showAdvanced}
-                        onChange={(e) => setShowAdvanced(e.target.checked)}
-                      />
-                      <span>Advanced</span>
-                    </label>
                   </div>
+                  <label className="hide-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={isSidebarHidden}
+                      onChange={(e) => setIsSidebarHidden(e.target.checked)}
+                    />
+                    <span>Hide</span>
+                  </label>
+                </div>
 
-                  <div className="entries-list">
-                    <div className="add-name-input">
-                      <textarea
-                        placeholder="Type names here, press Enter for new line..."
-                        value={namesText}
-                        onChange={handleNamesTextChange}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: '#1a1a1a',
-                          border: '1px solid rgb(255, 255, 255)',
-                          color: 'white',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          fontFamily: 'inherit',
-                          resize: 'none',
-                          boxSizing: 'border-box'
-                        }}
-                      />
+                {activeTab === 'entries' ? (
+                  <>
+                    <div className="sidebar-actions">
+                      <button className="action-btn" onClick={shuffleNames} title="Shuffle">
+                        <FiShuffle className="icon" />
+                        <span>Shuffle</span>
+                      </button>
+                      <button className="action-btn" onClick={sortNames} title="Sort">
+                        <span className="icon" style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.5' }}>
+                          <FiArrowUp style={{ fontSize: '10px' }} />
+                          <FiArrowDown style={{ fontSize: '10px' }} />
+                        </span>
+                        <span>Sort</span>
+                      </button>
+                      <button className="action-btn dropdown" title="Add image">
+                        <span>Add image</span>
+                        <FiChevronDown className="icon" />
+                      </button>
+                      <label className="advanced-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={showAdvanced}
+                          onChange={(e) => setShowAdvanced(e.target.checked)}
+                        />
+                        <span>Advanced</span>
+                      </label>
                     </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="sidebar-actions">
-                    <button className="action-btn" onClick={sortResults} title="Sort">
-                      <FiArrowUp className="icon" />
-                      <span>Sort</span>
-                    </button>
-                    <button className="action-btn" onClick={clearResults} title="Clear the list">
-                      <span className="icon">×</span>
-                      <span>Clear the list</span>
-                    </button>
-                  </div>
 
-                  <div className="entries-list">
-                    <div className="names-container">
-                      {results.length === 0 ? (
-                        <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
-                          No results yet
-                        </div>
-                      ) : (
-                        results.map((name, index) => (
-                          <div key={index} className="name-item">
-                            <span>{name}</span>
+                    <div className="entries-list">
+                      <div className="add-name-input">
+                        <textarea
+                          placeholder="Type names here, press Enter for new line..."
+                          value={namesText}
+                          onChange={handleNamesTextChange}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: '#1a1a1a',
+                            border: '1px solid rgb(255, 255, 255)',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontFamily: 'inherit',
+                            resize: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="sidebar-actions">
+                      <button className="action-btn" onClick={sortResults} title="Sort">
+                        <FiArrowUp className="icon" />
+                        <span>Sort</span>
+                      </button>
+                      <button className="action-btn" onClick={clearResults} title="Clear the list">
+                        <span className="icon">×</span>
+                        <span>Clear the list</span>
+                      </button>
+                    </div>
+
+                    <div className="entries-list">
+                      <div className="names-container">
+                        {results.length === 0 ? (
+                          <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                            No results yet
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          results.map((name, index) => (
+                            <div key={index} className="name-item">
+                              <span>{name}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+                  </>
+                )}
+              </>
+            )}
+        </div >
+      </div >
 
       {/* Winner Pop-up */}
-      {showWinner && winner && (
-        <div className="winner-overlay" onClick={handleCloseWinner}>
-          <div className="winner-popup" onClick={(e) => e.stopPropagation()}>
-            <div className="winner-header" style={{ backgroundColor: winner.color }}>
-              <h2>We have a winner!</h2>
-              <button className="winner-close-btn" onClick={handleCloseWinner}>×</button>
-            </div>
-            <div className="winner-content">
-              <div className="winner-name">{winner.name}</div>
-              <div className="winner-buttons">
-                <button className="winner-btn close-btn" onClick={handleCloseWinner}>Close</button>
-                <button className="winner-btn remove-btn" onClick={handleRemoveWinner}>Remove</button>
+      {
+        showWinner && winner && (
+          <div className="winner-overlay" onClick={handleCloseWinner}>
+            <div className="winner-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="winner-header" style={{ backgroundColor: winner.color }}>
+                <h2>We have a winner!</h2>
+                <button className="winner-close-btn" onClick={handleCloseWinner}>×</button>
+              </div>
+              <div className="winner-content">
+                <div className="winner-name">{winner.name}</div>
+                <div className="winner-buttons">
+                  <button className="winner-btn close-btn" onClick={handleCloseWinner}>Close</button>
+                  <button className="winner-btn remove-btn" onClick={handleRemoveWinner}>Remove</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Customize Pop-up */}
-      {showCustomize && (
-        <div className="customize-overlay" onClick={() => setShowCustomize(false)}>
-          <div className="customize-popup" onClick={(e) => e.stopPropagation()}>
-            <div className="customize-tabs">
-              <button
-                className={`customize-tab ${customizeTab === 'during-spin' ? 'active' : ''}`}
-                onClick={() => setCustomizeTab('during-spin')}
-              >
-                During spin
-              </button>
-              <button
-                className={`customize-tab ${customizeTab === 'after-spin' ? 'active' : ''}`}
-                onClick={() => setCustomizeTab('after-spin')}
-              >
-                After spin
-              </button>
-              <button
-                className={`customize-tab ${customizeTab === 'appearance' ? 'active' : ''}`}
-                onClick={() => setCustomizeTab('appearance')}
-              >
-                Appearance
-              </button>
-            </div>
+      {
+        showCustomize && (
+          <div className="customize-overlay" onClick={() => setShowCustomize(false)}>
+            <div className="customize-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="customize-tabs">
+                <button
+                  className={`customize-tab ${customizeTab === 'during-spin' ? 'active' : ''}`}
+                  onClick={() => setCustomizeTab('during-spin')}
+                >
+                  During spin
+                </button>
+                <button
+                  className={`customize-tab ${customizeTab === 'after-spin' ? 'active' : ''}`}
+                  onClick={() => setCustomizeTab('after-spin')}
+                >
+                  After spin
+                </button>
+                <button
+                  className={`customize-tab ${customizeTab === 'appearance' ? 'active' : ''}`}
+                  onClick={() => setCustomizeTab('appearance')}
+                >
+                  Appearance
+                </button>
+              </div>
 
-            <div className="customize-content">
-              {customizeTab === 'during-spin' && (
-                <div className="customize-section">
-                  <div className="customize-field">
-                    <label className="customize-label">Sound</label>
-                    <div className="customize-sound-controls">
-                      <select
-                        className="customize-select"
-                        value={settings.sound}
-                        onChange={(e) => setSettings({ ...settings, sound: e.target.value })}
-                      >
-                        <option>Ticking sound</option>
-                      </select>
-                      <button className="customize-icon-btn" title="Play">
-                        <FiPlay />
-                      </button>
-                      <button className="customize-icon-btn" title="Stop">
-                        <FiSquare />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="customize-field">
-                    <label className="customize-label">Volume</label>
-                    <div className="customize-slider-container" style={{ '--slider-progress': `${settings.volume}%` }}>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={settings.volume}
-                        onChange={(e) => setSettings({ ...settings, volume: parseInt(e.target.value) })}
-                        className="customize-slider"
-                        style={{ '--slider-progress': `${settings.volume}%` }}
-                      />
-                      <div className="customize-slider-labels">
-                        <span>0%</span>
-                        <span>25%</span>
-                        <span>50%</span>
-                        <span>75%</span>
-                        <span>100%</span>
+              <div className="customize-content">
+                {customizeTab === 'during-spin' && (
+                  <div className="customize-section">
+                    <div className="customize-field">
+                      <label className="customize-label">Sound</label>
+                      <div className="customize-sound-controls">
+                        <select
+                          className="customize-select"
+                          value={settings.sound}
+                          onChange={(e) => setSettings({ ...settings, sound: e.target.value })}
+                        >
+                          <option>Ticking sound</option>
+                        </select>
+                        <button className="customize-icon-btn" title="Play">
+                          <FiPlay />
+                        </button>
+                        <button className="customize-icon-btn" title="Stop">
+                          <FiSquare />
+                        </button>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="customize-checkboxes">
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.displayDuplicates}
-                        onChange={(e) => setSettings({ ...settings, displayDuplicates: e.target.checked })}
-                      />
-                      <span>Display duplicates</span>
-                      <FiHelpCircle className="customize-help-icon" />
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.spinSlowly}
-                        onChange={(e) => setSettings({ ...settings, spinSlowly: e.target.checked })}
-                      />
-                      <span>Spin slowly</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.showTitle}
-                        onChange={(e) => setSettings({ ...settings, showTitle: e.target.checked })}
-                      />
-                      <span>Show title</span>
-                    </label>
-                  </div>
-
-                  <div className="customize-field">
-                    <label className="customize-label">Spin time (seconds)</label>
-                    <div className="customize-slider-container" style={{ '--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%` }}>
-                      <input
-                        type="range"
-                        min="1"
-                        max="60"
-                        value={settings.spinTime}
-                        onChange={(e) => setSettings({ ...settings, spinTime: parseInt(e.target.value) })}
-                        className="customize-slider"
-                        style={{ '--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%` }}
-                      />
-                      <div className="customize-slider-labels">
-                        <span>1</span>
-                        <span>10</span>
-                        <span>20</span>
-                        <span>30</span>
-                        <span>40</span>
-                        <span>50</span>
-                        <span>60</span>
+                    <div className="customize-field">
+                      <label className="customize-label">Volume</label>
+                      <div className="customize-slider-container" style={{ '--slider-progress': `${settings.volume}%` }}>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={settings.volume}
+                          onChange={(e) => setSettings({ ...settings, volume: parseInt(e.target.value) })}
+                          className="customize-slider"
+                          style={{ '--slider-progress': `${settings.volume}%` }}
+                        />
+                        <div className="customize-slider-labels">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="customize-field">
-                    <label className="customize-label-bold">Max number of names visible on the wheel</label>
-                    <p className="customize-description">All names in the text-box have the same chance of winning, regardless of this value.</p>
-                    <div className="customize-slider-container" style={{ '--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%` }}>
-                      <input
-                        type="range"
-                        min="4"
-                        max="1000"
-                        value={settings.maxNamesVisible}
-                        onChange={(e) => setSettings({ ...settings, maxNamesVisible: parseInt(e.target.value) })}
-                        className="customize-slider"
-                        style={{ '--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%` }}
-                      />
-                      <div className="customize-slider-labels">
-                        <span>4</span>
-                        <span>100</span>
-                        <span>200</span>
-                        <span>300</span>
-                        <span>400</span>
-                        <span>500</span>
-                        <span>600</span>
-                        <span>700</span>
-                        <span>800</span>
-                        <span>900</span>
-                        <span>1000</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {customizeTab === 'after-spin' && (
-                <div className="customize-section">
-                  <div className="customize-field">
-                    <label className="customize-label">Sound</label>
-                    <div className="customize-sound-controls">
-                      <select
-                        className="customize-select"
-                        value={settings.afterSpinSound}
-                        onChange={(e) => setSettings({ ...settings, afterSpinSound: e.target.value })}
-                      >
-                        <option>Subdued applause</option>
-                      </select>
-                      <button className="customize-icon-btn" title="Play">
-                        <FiPlay />
-                      </button>
-                      <button className="customize-icon-btn" title="Stop">
-                        <FiSquare />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="customize-field">
-                    <label className="customize-label">Volume</label>
-                    <div className="customize-slider-container" style={{ '--slider-progress': `${settings.afterSpinVolume}%` }}>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={settings.afterSpinVolume}
-                        onChange={(e) => setSettings({ ...settings, afterSpinVolume: parseInt(e.target.value) })}
-                        className="customize-slider"
-                        style={{ '--slider-progress': `${settings.afterSpinVolume}%` }}
-                      />
-                      <div className="customize-slider-labels">
-                        <span>0%</span>
-                        <span>25%</span>
-                        <span>50%</span>
-                        <span>75%</span>
-                        <span>100%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="customize-checkboxes">
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.animateWinningEntry}
-                        onChange={(e) => setSettings({ ...settings, animateWinningEntry: e.target.checked })}
-                      />
-                      <span>Animate winning entry</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.launchConfetti}
-                        onChange={(e) => setSettings({ ...settings, launchConfetti: e.target.checked })}
-                      />
-                      <span>Launch confetti</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.autoRemoveWinner}
-                        onChange={(e) => setSettings({ ...settings, autoRemoveWinner: e.target.checked })}
-                      />
-                      <span>Auto-remove winner after 5 seconds</span>
-                    </label>
-                  </div>
-
-                  <div className="customize-field">
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.displayPopup}
-                        onChange={(e) => setSettings({ ...settings, displayPopup: e.target.checked })}
-                      />
-                      <span>Display popup with message:</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="customize-text-input"
-                      value={settings.popupMessage}
-                      onChange={(e) => setSettings({ ...settings, popupMessage: e.target.value })}
-                      disabled={!settings.displayPopup}
-                    />
-                    <div className="customize-indented-checkbox">
+                    <div className="customize-checkboxes">
                       <label className="customize-checkbox-label">
                         <input
                           type="checkbox"
-                          checked={settings.displayRemoveButton}
-                          onChange={(e) => setSettings({ ...settings, displayRemoveButton: e.target.checked })}
-                          disabled={!settings.displayPopup}
+                          checked={settings.displayDuplicates}
+                          onChange={(e) => setSettings({ ...settings, displayDuplicates: e.target.checked })}
                         />
-                        <span>Display the "Remove" button</span>
+                        <span>Display duplicates</span>
+                        <FiHelpCircle className="customize-help-icon" />
                       </label>
-                    </div>
-                  </div>
-
-                  <div className="customize-field">
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.playClickSoundOnRemove}
-                        onChange={(e) => setSettings({ ...settings, playClickSoundOnRemove: e.target.checked })}
-                      />
-                      <span>Play a click sound when the winner is removed</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {customizeTab === 'appearance' && (
-                <div className="customize-section">
-                  <div className="customize-field">
-                    <div className="customize-toggle-container">
-                      <div className={`customize-toggle-option ${!settings.wheelBackgroundImage ? 'active' : ''}`}>
-                        <div className="customize-option-icon customize-wheel-icon">
-                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 64, 64)' }}></div>
-                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 177, 0)' }}></div>
-                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 195, 255)' }}></div>
-                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 217, 0)' }}></div>
-                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 195, 255)' }}></div>
-                          <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 165, 0)' }}></div>
-                        </div>
-                        <span className="customize-option-text">One color per section</span>
-                      </div>
-                      <label className="customize-toggle">
+                      <label className="customize-checkbox-label">
                         <input
                           type="checkbox"
-                          checked={settings.wheelBackgroundImage}
-                          onChange={(e) => setSettings({ ...settings, wheelBackgroundImage: e.target.checked })}
+                          checked={settings.spinSlowly}
+                          onChange={(e) => setSettings({ ...settings, spinSlowly: e.target.checked })}
                         />
-                        <span className="customize-toggle-slider"></span>
+                        <span>Spin slowly</span>
                       </label>
-                      <div className={`customize-toggle-option ${settings.wheelBackgroundImage ? 'active' : ''}`}>
-                        <div className="customize-option-icon">
-                          <div className="cookie-icon">🍪</div>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.showTitle}
+                          onChange={(e) => setSettings({ ...settings, showTitle: e.target.checked })}
+                        />
+                        <span>Show title</span>
+                      </label>
+                    </div>
+
+                    <div className="customize-field">
+                      <label className="customize-label">Spin time (seconds)</label>
+                      <div className="customize-slider-container" style={{ '--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%` }}>
+                        <input
+                          type="range"
+                          min="1"
+                          max="60"
+                          value={settings.spinTime}
+                          onChange={(e) => setSettings({ ...settings, spinTime: parseInt(e.target.value) })}
+                          className="customize-slider"
+                          style={{ '--slider-progress': `${((settings.spinTime - 1) / 59) * 100}%` }}
+                        />
+                        <div className="customize-slider-labels">
+                          <span>1</span>
+                          <span>10</span>
+                          <span>20</span>
+                          <span>30</span>
+                          <span>40</span>
+                          <span>50</span>
+                          <span>60</span>
                         </div>
-                        <span className="customize-option-text">Wheel background image</span>
+                      </div>
+                    </div>
+
+                    <div className="customize-field">
+                      <label className="customize-label-bold">Max number of names visible on the wheel</label>
+                      <p className="customize-description">All names in the text-box have the same chance of winning, regardless of this value.</p>
+                      <div className="customize-slider-container" style={{ '--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%` }}>
+                        <input
+                          type="range"
+                          min="4"
+                          max="1000"
+                          value={settings.maxNamesVisible}
+                          onChange={(e) => setSettings({ ...settings, maxNamesVisible: parseInt(e.target.value) })}
+                          className="customize-slider"
+                          style={{ '--slider-progress': `${((settings.maxNamesVisible - 4) / 996) * 100}%` }}
+                        />
+                        <div className="customize-slider-labels">
+                          <span>4</span>
+                          <span>100</span>
+                          <span>200</span>
+                          <span>300</span>
+                          <span>400</span>
+                          <span>500</span>
+                          <span>600</span>
+                          <span>700</span>
+                          <span>800</span>
+                          <span>900</span>
+                          <span>1000</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {settings.wheelBackgroundImage && (
+                {customizeTab === 'after-spin' && (
+                  <div className="customize-section">
                     <div className="customize-field">
-                      <label className="customize-label">Wheel background image</label>
-                      <button className="customize-image-btn">
-                        <div className="cookie-icon">🍪</div>
-                        <span>Wheel background image</span>
+                      <label className="customize-label">Sound</label>
+                      <div className="customize-sound-controls">
+                        <select
+                          className="customize-select"
+                          value={settings.afterSpinSound}
+                          onChange={(e) => setSettings({ ...settings, afterSpinSound: e.target.value })}
+                        >
+                          <option>Subdued applause</option>
+                        </select>
+                        <button className="customize-icon-btn" title="Play">
+                          <FiPlay />
+                        </button>
+                        <button className="customize-icon-btn" title="Stop">
+                          <FiSquare />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="customize-field">
+                      <label className="customize-label">Volume</label>
+                      <div className="customize-slider-container" style={{ '--slider-progress': `${settings.afterSpinVolume}%` }}>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={settings.afterSpinVolume}
+                          onChange={(e) => setSettings({ ...settings, afterSpinVolume: parseInt(e.target.value) })}
+                          className="customize-slider"
+                          style={{ '--slider-progress': `${settings.afterSpinVolume}%` }}
+                        />
+                        <div className="customize-slider-labels">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="customize-checkboxes">
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.animateWinningEntry}
+                          onChange={(e) => setSettings({ ...settings, animateWinningEntry: e.target.checked })}
+                        />
+                        <span>Animate winning entry</span>
+                      </label>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.launchConfetti}
+                          onChange={(e) => setSettings({ ...settings, launchConfetti: e.target.checked })}
+                        />
+                        <span>Launch confetti</span>
+                      </label>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.autoRemoveWinner}
+                          onChange={(e) => setSettings({ ...settings, autoRemoveWinner: e.target.checked })}
+                        />
+                        <span>Auto-remove winner after 5 seconds</span>
+                      </label>
+                    </div>
+
+                    <div className="customize-field">
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.displayPopup}
+                          onChange={(e) => setSettings({ ...settings, displayPopup: e.target.checked })}
+                        />
+                        <span>Display popup with message:</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="customize-text-input"
+                        value={settings.popupMessage}
+                        onChange={(e) => setSettings({ ...settings, popupMessage: e.target.value })}
+                        disabled={!settings.displayPopup}
+                      />
+                      <div className="customize-indented-checkbox">
+                        <label className="customize-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={settings.displayRemoveButton}
+                            onChange={(e) => setSettings({ ...settings, displayRemoveButton: e.target.checked })}
+                            disabled={!settings.displayPopup}
+                          />
+                          <span>Display the "Remove" button</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="customize-field">
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.playClickSoundOnRemove}
+                          onChange={(e) => setSettings({ ...settings, playClickSoundOnRemove: e.target.checked })}
+                        />
+                        <span>Play a click sound when the winner is removed</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {customizeTab === 'appearance' && (
+                  <div className="customize-section">
+                    <div className="customize-field">
+                      <div className="customize-toggle-container">
+                        <div className={`customize-toggle-option ${!settings.wheelBackgroundImage ? 'active' : ''}`}>
+                          <div className="customize-option-icon customize-wheel-icon">
+                            <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 64, 64)' }}></div>
+                            <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 177, 0)' }}></div>
+                            <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 195, 255)' }}></div>
+                            <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 217, 0)' }}></div>
+                            <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(0, 195, 255)' }}></div>
+                            <div className="wheel-icon-slice" style={{ backgroundColor: 'rgb(255, 165, 0)' }}></div>
+                          </div>
+                          <span className="customize-option-text">One color per section</span>
+                        </div>
+                        <label className="customize-toggle">
+                          <input
+                            type="checkbox"
+                            checked={settings.wheelBackgroundImage}
+                            onChange={(e) => setSettings({ ...settings, wheelBackgroundImage: e.target.checked })}
+                          />
+                          <span className="customize-toggle-slider"></span>
+                        </label>
+                        <div className={`customize-toggle-option ${settings.wheelBackgroundImage ? 'active' : ''}`}>
+                          <div className="customize-option-icon">
+                            <div className="cookie-icon">🍪</div>
+                          </div>
+                          <span className="customize-option-text">Wheel background image</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {settings.wheelBackgroundImage && (
+                      <div className="customize-field">
+                        <label className="customize-label">Wheel background image</label>
+                        <button className="customize-image-btn">
+                          <div className="cookie-icon">🍪</div>
+                          <span>Wheel background image</span>
+                          <FiChevronDown />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="customize-field">
+                      <button className="customize-theme-btn">
+                        <span>Apply a theme</span>
                         <FiChevronDown />
                       </button>
                     </div>
-                  )}
 
-                  <div className="customize-field">
-                    <button className="customize-theme-btn">
-                      <span>Apply a theme</span>
-                      <FiChevronDown />
-                    </button>
-                  </div>
-
-                  <div className="customize-field">
-                    <div className="customize-colors-header">
-                      <label className="customize-label-bold">Customize colors</label>
-                      <FiHelpCircle className="customize-help-icon" />
-                    </div>
-                    <div className="customize-color-palettes">
-                      {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
-                        <div key={index} className="customize-color-palette-item">
-                          <div className="customize-color-palette-icon">
-                            <FiDroplet />
+                    <div className="customize-field">
+                      <div className="customize-colors-header">
+                        <label className="customize-label-bold">Customize colors</label>
+                        <FiHelpCircle className="customize-help-icon" />
+                      </div>
+                      <div className="customize-color-palettes">
+                        {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
+                          <div key={index} className="customize-color-palette-item">
+                            <div className="customize-color-palette-icon">
+                              <FiDroplet />
+                            </div>
+                            <label className="customize-checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={settings.colorPalettes[index]}
+                                onChange={(e) => {
+                                  const newPalettes = [...settings.colorPalettes]
+                                  newPalettes[index] = e.target.checked
+                                  setSettings({ ...settings, colorPalettes: newPalettes })
+                                }}
+                              />
+                            </label>
                           </div>
-                          <label className="customize-checkbox-label">
-                            <input
-                              type="checkbox"
-                              checked={settings.colorPalettes[index]}
-                              onChange={(e) => {
-                                const newPalettes = [...settings.colorPalettes]
-                                newPalettes[index] = e.target.checked
-                                setSettings({ ...settings, colorPalettes: newPalettes })
-                              }}
-                            />
-                          </label>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="customize-field">
+                      <button className="customize-image-btn">
+                        <FiImage />
+                        <span>Image at the center of the wheel</span>
+                        <FiChevronDown />
+                      </button>
+                    </div>
+
+                    <div className="customize-field">
+                      <label className="customize-label">Image size</label>
+                      <select
+                        className="customize-select"
+                        value={settings.imageSize}
+                        onChange={(e) => setSettings({ ...settings, imageSize: e.target.value })}
+                      >
+                        <option>S</option>
+                        <option>M</option>
+                        <option>L</option>
+                      </select>
+                    </div>
+
+                    <div className="customize-checkboxes-grid">
+                      <label className="customize-checkbox-label">
+                        <FiDroplet className="customize-checkbox-icon" />
+                        <input
+                          type="checkbox"
+                          checked={settings.pageBackgroundColor}
+                          onChange={(e) => setSettings({ ...settings, pageBackgroundColor: e.target.checked })}
+                        />
+                        <span>Page background color</span>
+                      </label>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.contours}
+                          onChange={(e) => setSettings({ ...settings, contours: e.target.checked })}
+                        />
+                        <span>Contours</span>
+                      </label>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.displayColorGradient}
+                          onChange={(e) => setSettings({ ...settings, displayColorGradient: e.target.checked })}
+                        />
+                        <span>Display a color gradient on the page</span>
+                      </label>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.wheelShadow}
+                          onChange={(e) => setSettings({ ...settings, wheelShadow: e.target.checked })}
+                        />
+                        <span>Wheel shadow</span>
+                      </label>
+                      <label className="customize-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={settings.pointerChangesColor}
+                          onChange={(e) => setSettings({ ...settings, pointerChangesColor: e.target.checked })}
+                        />
+                        <span>Pointer changes color</span>
+                      </label>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  <div className="customize-field">
-                    <button className="customize-image-btn">
-                      <FiImage />
-                      <span>Image at the center of the wheel</span>
-                      <FiChevronDown />
-                    </button>
-                  </div>
-
-                  <div className="customize-field">
-                    <label className="customize-label">Image size</label>
-                    <select
-                      className="customize-select"
-                      value={settings.imageSize}
-                      onChange={(e) => setSettings({ ...settings, imageSize: e.target.value })}
-                    >
-                      <option>S</option>
-                      <option>M</option>
-                      <option>L</option>
-                    </select>
-                  </div>
-
-                  <div className="customize-checkboxes-grid">
-                    <label className="customize-checkbox-label">
-                      <FiDroplet className="customize-checkbox-icon" />
-                      <input
-                        type="checkbox"
-                        checked={settings.pageBackgroundColor}
-                        onChange={(e) => setSettings({ ...settings, pageBackgroundColor: e.target.checked })}
-                      />
-                      <span>Page background color</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.contours}
-                        onChange={(e) => setSettings({ ...settings, contours: e.target.checked })}
-                      />
-                      <span>Contours</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.displayColorGradient}
-                        onChange={(e) => setSettings({ ...settings, displayColorGradient: e.target.checked })}
-                      />
-                      <span>Display a color gradient on the page</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.wheelShadow}
-                        onChange={(e) => setSettings({ ...settings, wheelShadow: e.target.checked })}
-                      />
-                      <span>Wheel shadow</span>
-                    </label>
-                    <label className="customize-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={settings.pointerChangesColor}
-                        onChange={(e) => setSettings({ ...settings, pointerChangesColor: e.target.checked })}
-                      />
-                      <span>Pointer changes color</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="customize-buttons">
-              <button className="customize-btn cancel-btn" onClick={() => setShowCustomize(false)}>
-                Cancel
-              </button>
-              <button className="customize-btn ok-btn" onClick={() => setShowCustomize(false)}>
-                OK
-              </button>
+              <div className="customize-buttons">
+                <button className="customize-btn cancel-btn" onClick={() => setShowCustomize(false)}>
+                  Cancel
+                </button>
+                <button className="customize-btn ok-btn" onClick={() => setShowCustomize(false)}>
+                  OK
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 
