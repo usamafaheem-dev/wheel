@@ -18,7 +18,7 @@ body {
 .app {
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, #2b0505 0%, #254c6a 60%, #05051a 100%);
+  background: linear-gradient(135deg, #2b0505 0%, #233159 60%, #05051a 100%);
   display: flex;
   flex-direction: column;
   color: white;

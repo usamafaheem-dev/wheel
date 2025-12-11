@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import confetti from 'canvas-confetti'
 import { FiSettings, FiFile, FiFolder, FiSave, FiShare2, FiSearch, FiMaximize, FiChevronDown, FiGlobe, FiShuffle, FiArrowUp, FiArrowDown, FiPlay, FiSquare, FiHelpCircle, FiImage, FiDroplet } from 'react-icons/fi'
 import './App.css'
 
@@ -52,6 +53,95 @@ function App() {
   const animationFrameRef = useRef(null)
   const animationCompletedRef = useRef(false) // Track if animation is completed
   const isFrozenRef = useRef(false) // Track if wheel is frozen
+
+  // Audio Context for zero-latency synthetic sounds
+  const audioContextRef = useRef(null)
+
+  // Initialize Audio Context on user interaction
+  useEffect(() => {
+    const initAudio = () => {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      }
+    }
+    window.addEventListener('click', initAudio)
+    window.addEventListener('keydown', initAudio)
+    return () => {
+      window.removeEventListener('click', initAudio)
+      window.removeEventListener('keydown', initAudio)
+      if (audioContextRef.current) audioContextRef.current.close()
+    }
+  }, [])
+
+  // 1. Synthetic "Click" Sound (Zero Latency)
+  // Short, sharp white noise burst + sine wave for a physical "click" sound
+  const playClickSound = useCallback(() => {
+    const ctx = audioContextRef.current
+    if (!ctx) return
+    if (ctx.state === 'suspended') ctx.resume()
+
+    const t = ctx.currentTime
+
+    // Filtered Noise for "Texture"
+    const bufferSize = ctx.sampleRate * 0.01 // 10ms
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+    const noise = ctx.createBufferSource()
+    noise.buffer = buffer
+    const noiseGain = ctx.createGain()
+    noiseGain.gain.setValueAtTime(0.5, t)
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.01)
+    noise.connect(noiseGain)
+    noiseGain.connect(ctx.destination)
+    noise.start(t)
+
+    // High Sine Beep for "Impact"
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.frequency.setValueAtTime(800, t)
+    osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.05)
+    gain.gain.setValueAtTime(0.3, t)
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(t)
+    osc.stop(t + 0.05)
+  }, [])
+
+  // 2. Synthetic "Fanfare" Sound (Win)
+  const playFanfare = useCallback(() => {
+    const ctx = audioContextRef.current
+    if (!ctx) return
+    if (ctx.state === 'suspended') ctx.resume()
+
+    const t = ctx.currentTime
+    // Simple major chord arpeggio
+    const freqs = [523.25, 659.25, 783.99, 1046.50] // C Major
+
+    freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.value = f
+
+      // Staggered entrance
+      const start = t + i * 0.1
+      const dur = 0.8
+
+      gain.gain.setValueAtTime(0, start)
+      gain.gain.linearRampToValueAtTime(0.2, start + 0.05)
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(start)
+      osc.stop(start + dur)
+    })
+  }, [])
 
   // Continuous slow rotation - only when not spinning and not frozen
   useEffect(() => {
@@ -146,9 +236,10 @@ function App() {
 
     // Get current rotation - this is the ONLY rotation value
     const startRotation = finalRotation
+    let lastTickRotation = startRotation // Track last rotation for sound sync
 
     // Base spin speed (degrees per second) for calculating total rotation
-    const baseSpeed = 2160 // 6 full rotations per second - Major difference!
+    const baseSpeed = 7200 // Maximum Velocity! 20 rotations/sec
 
     // Duration is exactly what the user sets (in seconds)
     const duration = settings.spinTime * 1000 // Convert to milliseconds
@@ -194,6 +285,13 @@ function App() {
         // Apply easing for smooth acceleration and deceleration
         const easedProgress = ease(progress)
         const current = startRotation + (endRotation - startRotation) * easedProgress
+        // Robust sync: Play every 25 degrees
+        // Use playClickSound directly for instant response
+        if (Math.abs(current - lastTickRotation) >= 25) {
+          playClickSound()
+          lastTickRotation = current
+        }
+
         // Update ONLY finalRotation - the single source of truth
         setFinalRotation(current)
         animationFrameRef.current = requestAnimationFrame(animate)
@@ -290,6 +388,22 @@ function App() {
           // Reset ref after processing
           winnerProcessedRef.current = false
 
+          // Grand Finale Confetti (3 bursts!)
+          const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 2000 }
+
+          const randomInRange = (min, max) => Math.random() * (max - min) + min
+
+          // Burst 1: Center
+          confetti({ ...defaults, particleCount: 100, origin: { y: 0.6 } })
+
+          // Burst 2: Left (delayed)
+          setTimeout(() => confetti({ ...defaults, particleCount: 50, angle: 60, origin: { x: 0, y: 0.7 } }), 200)
+
+          // Burst 3: Right (delayed)
+          setTimeout(() => confetti({ ...defaults, particleCount: 50, angle: 120, origin: { x: 1, y: 0.7 } }), 400)
+
+          playFanfare()
+
           // Wait 1 second after wheel stops, then show pop-up
           // Wheel remains frozen during this time and until pop-up is closed
           setTimeout(() => {
@@ -368,7 +482,37 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [spinWheel])
 
-  const colors = ['rgb(255, 217, 0)', 'rgb(0, 177, 0)', 'rgb(0, 195, 255)', 'rgb(255, 64, 64)'] // blue, green, yellow, red
+  const colors = ['#efb71d', '#24a643', '#4d7ceb', '#d82135'] // yellow, green, blue, red
+
+  // Helper to determine text color based on background
+  const getTextColor = (bgColor) => {
+    // Yellow (#efb71d) and Green (#24a643) get black text
+    if (bgColor === '#efb71d' || bgColor === '#24a643') return 'black'
+    return 'white'
+  }
+
+  // Calculate current color under pointer
+  const getCurrentPointerColor = () => {
+    if (names.length === 0) return '#ffd700' // Default Gold
+
+    const sliceAngle = 360 / names.length
+    // Normalize rotation
+    const R = ((finalRotation % 360) + 360) % 360
+    // Pointer is at 0 (Right). Angle at pointer in wheel context:
+    const pointerAngle = (360 - R) % 360
+
+    // Shift by 90 degrees because slice 0 starts at -90 (Top)
+    // So relative to slice 0, the pointer is at pointerAngle + 90
+    const adjustedAngle = (pointerAngle + 90) % 360
+
+    // Find index
+    const index = Math.floor(adjustedAngle / sliceAngle)
+    const safeIndex = index % names.length
+    return colors[safeIndex % colors.length]
+  }
+
+  const pointerColor = getCurrentPointerColor()
+
 
   // Fullscreen mode - only show wheel
   if (isFullscreen) {
@@ -413,11 +557,10 @@ function App() {
                   const textRotationDeg = (midAngle * 180 / Math.PI)
 
                   // Calculate dynamic font size based on slice size (angle)
-                  // Larger slices get larger font, smaller slices get smaller font
-                  // Scale down more gradually - keep larger font size longer
+                  // Significantly increased font sizes for better visibility on all devices
                   const arcLength = textRadius * angle * (Math.PI / 180)
-                  // Use a larger divisor to keep font size larger longer, only scale down for many entries
-                  const fontSize = Math.max(16, Math.min(36, arcLength / 10))
+                  // Min 24px, Max 52px (was 16/36) - Much larger text
+                  const fontSize = Math.max(24, Math.min(52, arcLength / 6))
 
                   return (
                     <g key={index}>
@@ -430,7 +573,7 @@ function App() {
                       <text
                         x={textX}
                         y={textY}
-                        fill="white"
+                        fill={getTextColor(colors[index % colors.length])}
                         fontSize={fontSize}
                         fontWeight="bold"
                         textAnchor="middle"
@@ -520,17 +663,16 @@ function App() {
                 }}
               >
                 <defs>
-                  <linearGradient id="goldGradientFS" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FFF7CC" />
-                    <stop offset="40%" stopColor="#FFD700" />
-                    <stop offset="60%" stopColor="#B8860B" />
-                    <stop offset="100%" stopColor="#DAA520" />
+                  <linearGradient id="dynamicGradientFS" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={pointerColor} style={{ filter: 'brightness(1.5)' }} />
+                    <stop offset="50%" stopColor={pointerColor} />
+                    <stop offset="100%" stopColor={pointerColor} style={{ filter: 'brightness(0.7)' }} />
                   </linearGradient>
                 </defs>
                 <path
                   d="M 10 50 L 90 20 L 90 80 Z"
-                  fill="url(#goldGradientFS)"
-                  stroke="#B8860B"
+                  fill="url(#dynamicGradientFS)"
+                  stroke={pointerColor}
                   strokeWidth="2"
                   filter="url(#bevel)"
                 />
@@ -639,11 +781,10 @@ function App() {
                 const textRotationDeg = (midAngle * 180 / Math.PI)
 
                 // Calculate dynamic font size based on slice size (angle)
-                // Larger slices get larger font, smaller slices get smaller font
-                // Scale down more gradually - keep larger font size longer
+                // Significantly increased font sizes for better visibility on all devices
                 const arcLength = textRadius * angle * (Math.PI / 180)
-                // Use a larger divisor to keep font size larger longer, only scale down for many entries
-                const fontSize = Math.max(18, Math.min(36, arcLength / 8))
+                // Min 24px, Max 52px (was 16/36) - Much larger text
+                const fontSize = Math.max(24, Math.min(52, arcLength / 6))
 
                 return (
                   <g key={index}>
@@ -656,7 +797,7 @@ function App() {
                     <text
                       x={textX}
                       y={textY}
-                      fill="white"
+                      fill={getTextColor(colors[index % colors.length])}
                       fontSize={fontSize}
                       fontWeight="bold"
                       textAnchor="middle"
@@ -746,11 +887,10 @@ function App() {
               }}
             >
               <defs>
-                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FFF7CC" />
-                  <stop offset="40%" stopColor="#FFD700" />
-                  <stop offset="60%" stopColor="#B8860B" />
-                  <stop offset="100%" stopColor="#DAA520" />
+                <linearGradient id="dynamicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={pointerColor} style={{ filter: 'brightness(1.5)' }} />
+                  <stop offset="50%" stopColor={pointerColor} />
+                  <stop offset="100%" stopColor={pointerColor} style={{ filter: 'brightness(0.7)' }} />
                 </linearGradient>
                 <filter id="bevel" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
@@ -769,8 +909,8 @@ function App() {
               {/* Main Arrow Body */}
               <path
                 d="M 10 50 L 90 20 L 90 80 Z"
-                fill="url(#goldGradient)"
-                stroke="#B8860B"
+                fill="url(#dynamicGradient)"
+                stroke={pointerColor}
                 strokeWidth="2"
                 filter="url(#bevel)"
               />
