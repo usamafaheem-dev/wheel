@@ -85,15 +85,48 @@ body {
   padding: 40px;
 }
 
+/* Main Wheel Wrapper - Generic/Mobile First */
 .wheel-wrapper {
-  position: relative;
   position: relative;
   width: min(850px, 90vw);
   height: min(850px, 90vw);
   max-width: 850px;
   max-height: 850px;
+  max-height: 850px;
   aspect-ratio: 1;
+  /* Ensure arrow isn't clipped if it sticks out */
+  overflow: visible;
+
+  /* Geometry Constants */
+  /* Geometry Constants */
+  /* Wheel has FIXED 20px padding in JS. CSS must match EXACTLY to prevents zoom drift. */
+  --wheel-padding: 20px;
+  /* Pointer tip is at 90% of its width */
+  /* Pointer tip is at 90% of its width */
+  --pointer-tip-depth: 0.9;
+
+  /* Responsive Pointer Size Default (Mobile) */
+  --pointer-size: 40px;
+  /* Nudge factor: Small positive value to ensure overlap. Now that base math is correct, we need less. */
+  --pointer-offset: 2px;
 }
+
+/* Desktop Optimization: Reduce wheel size to be less overwhelming */
+@media (min-width: 1024px) {
+  .wheel-wrapper {
+    width: 600px;
+    height: 600px;
+    /* Ensure it doesn't exceed screen height minus headers/padding */
+    max-height: 80vh;
+
+    /* Desktop Pointer Size (Restored to 40px - Small but visible) */
+    --pointer-size: 40px;
+    /* Desktop nudge: Small overlap */
+    --pointer-offset: 2px;
+  }
+}
+
+
 
 .wheel {
   width: 100%;
@@ -105,24 +138,38 @@ body {
 
 .wheel-pointer {
   position: absolute;
-  right: 20px;
   top: 50%;
   transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-right: 40px solid rgb(0, 0, 172);
-  border-top: 30px solid transparent;
-  border-bottom: 30px solid transparent;
-  position: absolute;
-  right: -15px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 60px;
-  height: 60px;
-  z-index: 5;
+  z-index: 20;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+  pointer-events: none;
   border: none;
+
+  /* Responsive Size from Variable */
+  width: var(--pointer-size);
+  height: var(--pointer-size);
+
+  /* Precise Responsive Positioning Calculation:
+     We want the Tip to be at 'Padding' distance from the container edge.
+     Tip is 'Depth * Width' from the Pointer's Right Edge.
+     Right_Pos + Tip_Depth = Padding
+     Right_Pos = Padding - Tip_Depth
+     PLUS Offset: We add the offset to move it further LEFT (closer).
+  */
+  right: calc(var(--wheel-padding) - (var(--pointer-size) * var(--pointer-tip-depth)) + var(--pointer-offset));
 }
+
+/* Tablet Tweaks */
+@media (min-width: 768px) {
+  .wheel-wrapper {
+    /* Tablet Pointer Size */
+    --pointer-size: 55px;
+  }
+}
+
+/* Desktop Tweaks handled in minimum-width: 1024px block above via --pointer-size override */
+
+
 
 .wheel-overlay {
   position: absolute;
@@ -308,6 +355,48 @@ body {
   border-color: #3B82F6;
 }
 
+.entries-textarea {
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid rgb(255, 255, 255);
+  color: white;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 20px;
+  /* Increased font size as requested */
+  font-family: inherit;
+  resize: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.entries-textarea:focus {
+  outline: none;
+  border-color: #3B82F6;
+}
+
+.entries-textarea {
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid rgb(255, 255, 255);
+  color: white;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 20px;
+  /* Increased font size as requested */
+  font-family: inherit;
+  resize: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.entries-textarea:focus {
+  outline: none;
+  border-color: #3B82F6;
+}
+
 .add-name-input button {
   background-color: #3B82F6;
   border: none;
@@ -327,25 +416,32 @@ body {
 .names-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  /* Slightly increased gap */
   width: 100%;
   padding: 0 12px;
 }
 
 .name-item {
   background-color: #1a1a1a;
-  padding: 10px 14px;
-  border-radius: 6px;
+  padding: 12px 16px;
+  /* Larger padding for touch targets and readability */
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 20px;
+  /* Increased to 20px as requested ("slighter more bigger") */
   color: white;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s;
+  letter-spacing: 0.5px;
+  /* improved letter spacing */
 }
 
 .name-item:hover {
   background-color: #2a2a2a;
+  transform: translateX(2px);
+  /* Subtle hover effect */
 }
 
 .remove-btn {

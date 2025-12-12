@@ -239,8 +239,8 @@ function App() {
     const startRotation = finalRotation
     let lastTickRotation = startRotation // Track last rotation for sound sync
 
-    // Duration: 6000ms as requested for "increase some more time"
-    const duration = 6000
+    // Duration: 11000ms (11s) - Longer spin for "heavy" natural feel
+    const duration = 11000
 
     // Calculate total rotation: 5-8 full rotations (1800-2880 degrees)
     const minRotations = 5
@@ -256,17 +256,37 @@ function App() {
 
     const startTime = performance.now()
 
-    // Easing function: Ease-In-Out Cubic
-    // "Motor start" effect: Accelerate (slowly start), fast spin, then decelerate (slow stop)
+    // Custom Easing: "Power Start + Friction Stop"
+    // Goals: 
     const ease = (t) => {
-      // t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-      // This creates a symmetrical S-curve: 
-      // First 50% of time: Accelerate from 0 to Max Speed
-      // Last 50% of time: Decelerate from Max Speed to 0
-      // Actually, for a spin wheel, we want a SHORT acceleration and LONG deceleration.
-      // But standard easeInOut is typically symmetric. 
-      // Let's use standard symmetric easeInOutCubic for the requested "Slow start -> Fast -> Slow stop"
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+      // Matched Derivative Piecewise Easing
+      // Guarantees smooth velocity transition from Acceleration to Deceleration.
+
+      // Configuration
+      const t1 = 0.20 // Acceleration for 20% of time (approx 2s). Gives a heavy "heave".
+      const p1 = 3    // Cubic acceleration (Heavy start)
+      const p2 = 5    // Quintic deceleration (Extra soft final slowdown)
+
+      // Calculate split point (Y) where curves meet to ensure velocity continuity
+      // Derivation: V1(t1) = V2(t1) -> solve for Y
+      // Y represents the portion of distance covered during the Deceleration phase (relative to 1)
+      const Y = (p1 * (1 - t1)) / (p2 * t1 + p1 * (1 - t1))
+
+      // X_Split is the distance covered at time t1
+      const x_split = 1 - Y
+
+      // Scaling coefficients
+      const k = x_split / Math.pow(t1, p1)      // Accel scaler
+      const A = Y / Math.pow(1 - t1, p2)        // Decel scaler
+
+      if (t < t1) {
+        // Phase 1: Acceleration
+        return k * Math.pow(t, p1)
+      } else {
+        // Phase 2: Deceleration
+        // Standard decay curve shifted to match peak velocity
+        return 1 - A * Math.pow(1 - t, p2)
+      }
     }
 
     const animate = () => {
@@ -756,15 +776,7 @@ function App() {
               viewBox="0 0 100 100"
               xmlns="http://www.w3.org/2000/svg"
               style={{
-                position: 'absolute',
-                right: 'calc(8% - 54px)', /* Dynamic calculation to touch wheel edge exactly */
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '60px', /* Increased size for visibility */
-                height: '60px',
-                zIndex: 20, /* Ensure it's on top */
-                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))', /* 3D shadow effect */
-                pointerEvents: 'none' /* Passthrough clicks */
+                pointerEvents: 'none'
               }}
             >
               <defs>
@@ -879,22 +891,10 @@ function App() {
                     <div className="entries-list">
                       <div className="add-name-input">
                         <textarea
+                          className="entries-textarea"
                           placeholder="Type names here, press Enter for new line..."
                           value={namesText}
                           onChange={handleNamesTextChange}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid rgb(255, 255, 255)',
-                            color: 'white',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            fontFamily: 'inherit',
-                            resize: 'none',
-                            boxSizing: 'border-box'
-                          }}
                         />
                       </div>
                     </div>
