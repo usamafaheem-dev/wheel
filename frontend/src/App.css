@@ -83,6 +83,8 @@ body {
   align-items: center;
   position: relative;
   padding: 40px;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 /* Main Wheel Wrapper - Generic/Mobile First */
@@ -151,6 +153,8 @@ body {
   transform: rotate(0deg);
   transition: none;
   transform-origin: center center;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .wheel-pointer {
@@ -1189,17 +1193,28 @@ body {
   .main-content {
     flex-direction: column;
     overflow: visible;
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-container {
     padding: 20px;
     flex: 0 0 auto;
     min-height: auto;
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-wrapper {
     width: 90vw;
     height: 90vw;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-wrapper canvas {
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .right-sidebar {
@@ -1266,12 +1281,16 @@ body {
     overflow: visible;
     flex: 1;
     min-height: 0;
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-container {
     padding: 20px;
     min-height: auto;
     flex-shrink: 0;
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-wrapper {
@@ -1280,6 +1299,13 @@ body {
     height: auto;
     aspect-ratio: 1;
     margin: 0 auto;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-wrapper canvas {
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-pointer {
@@ -1304,6 +1330,13 @@ body {
 @media (max-width: 768px) {
   .wheel-wrapper {
     max-width: 400px;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-container {
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-pointer {
@@ -1340,12 +1373,21 @@ body {
 
   .wheel-container {
     padding: 15px;
+    background: transparent !important;
+    background-color: transparent !important;
   }
 }
 
 @media (max-width: 480px) {
   .wheel-wrapper {
     max-width: 300px;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-container {
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .wheel-pointer {
