@@ -105,10 +105,15 @@ body {
   /* Pointer tip is at 90% of its width */
   --pointer-tip-depth: 0.9;
 
-  /* Responsive Pointer Size Default (Mobile) */
+  /* Fixed Pointer Size - same on all screens for consistent positioning */
   --pointer-size: 40px;
   /* Nudge factor: Small positive value to ensure overlap. Now that base math is correct, we need less. */
   --pointer-offset: 2px;
+  
+  /* Arrow position: tip at wheel edge (20px padding) */
+  /* Arrow tip is 36px from arrow's right edge, so right = 20px + 36px = 56px */
+  /* Arrow SVG: tip at x=10 (10% from left), so tip is 4px from left = 36px from right */
+  --arrow-right-position: calc(var(--wheel-padding) + 36px);
 }
 
 /* Desktop Optimization: Reduce wheel size to be less overwhelming */
@@ -119,10 +124,20 @@ body {
     /* Ensure it doesn't exceed screen height minus headers/padding */
     max-height: 80vh;
 
-    /* Desktop Pointer Size (Restored to 40px - Small but visible) */
+    /* Desktop Pointer Size - Same as default for consistency */
     --pointer-size: 40px;
     /* Desktop nudge: Small overlap */
     --pointer-offset: 2px;
+  }
+
+  .wheel-pointer {
+    /* Fixed position at right side (3 o'clock) - arrow points right, extending outward */
+    top: 50% !important;
+    right: -10px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 }
 
@@ -138,32 +153,44 @@ body {
 
 .wheel-pointer {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 50%; /* Center vertically */
+  right: -10px; /* Position at right side, extending outward from wheel edge (3 o'clock position) */
+  /* Fixed position: Arrow at right side (3 o'clock / 0 degrees) */
+  /* Arrow SVG tip is at x=90 (90% from left), pointing right */
+  /* Negative right value extends arrow outward from wheel edge */
+  transform: translateY(-50%); /* Center vertically, pointing right */
   z-index: 20;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+  /* Enhanced shadow for better visibility */
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   pointer-events: none;
   border: none;
-
-  /* Responsive Size from Variable */
-  width: var(--pointer-size);
-  height: var(--pointer-size);
-
-  /* Precise Responsive Positioning Calculation:
-     We want the Tip to be at 'Padding' distance from the container edge.
-     Tip is 'Depth * Width' from the Pointer's Right Edge.
-     Right_Pos + Tip_Depth = Padding
-     Right_Pos = Padding - Tip_Depth
-     PLUS Offset: We add the offset to move it further LEFT (closer).
-  */
-  right: calc(var(--wheel-padding) - (var(--pointer-size) * var(--pointer-tip-depth)) + var(--pointer-offset));
+  
+  /* Ensure arrow stays fixed - does NOT rotate with wheel */
+  will-change: auto;
+  
+  /* Fixed Size - same on all screens for consistent positioning */
+  width: 40px !important;
+  height: 40px !important;
+  
+  /* Smooth transitions for color changes */
+  transition: filter 0.2s ease;
 }
 
 /* Tablet Tweaks */
 @media (min-width: 768px) {
   .wheel-wrapper {
-    /* Tablet Pointer Size */
-    --pointer-size: 55px;
+    /* Tablet Pointer Size - Same as default for consistency */
+    --pointer-size: 40px;
+  }
+
+  .wheel-pointer {
+    /* Fixed position at right side (3 o'clock) - arrow points right, extending outward */
+    top: 50% !important;
+    right: -10px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 }
 
@@ -1254,10 +1281,10 @@ body {
   }
 
   .wheel-pointer {
-    right: -14px;
-    border-right: 28px solid rgb(239, 68, 68);
-    border-top: 22px solid transparent;
-    border-bottom: 22px solid transparent;
+    /* Fixed position - same on all screens - arrow tip touches wheel edge */
+    right: 56px !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 
   .right-sidebar {
@@ -1278,10 +1305,10 @@ body {
   }
 
   .wheel-pointer {
-    right: -12px;
-    border-right: 24px solid rgb(239, 68, 68);
-    border-top: 18px solid transparent;
-    border-bottom: 18px solid transparent;
+    /* Fixed position - same on all screens - arrow tip touches wheel edge */
+    right: 56px !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 
   .right-sidebar {
@@ -1320,10 +1347,10 @@ body {
   }
 
   .wheel-pointer {
-    right: -10px;
-    border-right: 18px solid rgb(239, 68, 68);
-    border-top: 14px solid transparent;
-    border-bottom: 14px solid transparent;
+    /* Fixed position - same on all screens - arrow tip touches wheel edge */
+    right: 56px !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 
   .right-sidebar {
@@ -1348,6 +1375,16 @@ body {
     width: 680px;
     height: 680px;
   }
+
+  .wheel-pointer {
+    /* Fixed position at right side (3 o'clock) - arrow points right, extending outward */
+    top: 50% !important;
+    right: -10px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
 }
 
 @media (min-width: 1201px) and (max-width: 1400px) {
@@ -1359,6 +1396,16 @@ body {
     width: 790px;
     height: 790px;
   }
+
+  .wheel-pointer {
+    /* Fixed position at right side (3 o'clock) - arrow points right, extending outward */
+    top: 50% !important;
+    right: -10px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
 }
 
 @media (min-width: 1401px) {
@@ -1369,6 +1416,16 @@ body {
   .wheel-wrapper {
     width: 850px;
     height: 850px;
+  }
+
+  .wheel-pointer {
+    /* Fixed position at right side (3 o'clock) - arrow points right, extending outward */
+    top: 50% !important;
+    right: -10px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 }
 
@@ -1434,9 +1491,518 @@ body {
   height: min(90vh, 90vw);
   max-width: 1000px;
   max-height: 1000px;
+  
+  /* Ensure same CSS variables for consistent pointer positioning */
+  --wheel-padding: 20px;
+  --pointer-tip-depth: 0.9;
+  --pointer-size: 40px; /* Same size for consistent positioning across all screens */
+  --pointer-offset: 2px;
+}
+
+.wheel-container-fullscreen .wheel-pointer {
+  /* Fixed position - same on all screens including fullscreen - arrow tip touches wheel edge */
+  right: 56px !important;
+  width: 40px !important;
+  height: 40px !important;
 }
 
 .wheel-container-fullscreen .wheel {
   width: 100%;
   height: 100%;
+}
+
+/* Admin Panel */
+.admin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.admin-panel {
+  background-color: #1a1a1a;
+  width: 450px;
+  height: 100vh;
+  overflow: hidden;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+
+/* Slide-in animation from left */
+.admin-panel-slide {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-out;
+}
+
+.admin-panel-login {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  height: auto;
+  max-height: 90vh;
+  border-radius: 12px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #3a3a3a;
+  background-color: #1a1a1a;
+}
+
+.admin-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.admin-logout-btn {
+  background-color: #d82135;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.admin-logout-btn:hover {
+  background-color: #c01e2f;
+}
+
+.admin-close-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.admin-close-btn:hover {
+  background-color: #3a3a3a;
+  color: white;
+}
+
+.admin-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.admin-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin-field {
+  margin-bottom: 20px;
+}
+
+.admin-field label {
+  display: block;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.admin-field input[type="text"],
+.admin-field input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.admin-field input[type="text"]:focus,
+.admin-field input[type="password"]:focus {
+  outline: none;
+  border-color: #4d7ceb;
+}
+
+.file-upload-area {
+  border: 2px dashed #3a3a3a;
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #2a2a2a;
+  color: white;
+}
+
+.file-upload-area:hover {
+  border-color: #4d7ceb;
+  background-color: #2f2f2f;
+}
+
+.admin-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #3a3a3a;
+}
+
+.admin-submit-btn,
+.admin-cancel-btn {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.admin-submit-btn {
+  background-color: #4d7ceb;
+  color: white;
+}
+
+.admin-submit-btn:hover:not(:disabled) {
+  background-color: #3d6cdb;
+}
+
+.admin-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-cancel-btn {
+  background-color: #3a3a3a;
+  color: white;
+}
+
+.admin-cancel-btn:hover {
+  background-color: #4a4a4a;
+}
+
+/* Admin Panel Sections */
+.admin-section {
+  margin-bottom: 24px;
+}
+
+.admin-section-title {
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0 0 16px 0;
+}
+
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-section-card {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #3a3a3a;
+}
+
+/* Upload Controls */
+.admin-upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-choose-btn {
+  background-color: #3a3a3a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.admin-choose-btn:hover {
+  background-color: #4a4a4a;
+}
+
+.admin-file-name {
+  color: #888;
+  font-size: 14px;
+}
+
+.admin-upload-btn {
+  width: 100%;
+  background-color: #4d7ceb;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.admin-upload-btn:hover:not(:disabled) {
+  background-color: #3d6cdb;
+}
+
+.admin-upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Publish Section */
+.admin-status-box {
+  background-color: #fee;
+  border: 1px solid #d82135;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #d82135;
+  font-size: 14px;
+  text-align: center;
+}
+
+.admin-publish-btn {
+  width: 100%;
+  background-color: #2a2a2a;
+  color: white;
+  border: 1px solid #3a3a3a;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.admin-publish-btn:hover:not(:disabled) {
+  background-color: #3a3a3a;
+  border-color: #4a4a4a;
+}
+
+.admin-publish-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Spin Controls */
+.admin-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-radio-label {
+  display: flex;
+  align-items: center;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.admin-radio-label input[type="radio"] {
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.admin-winner-select {
+  margin-top: 16px;
+}
+
+.admin-winner-select label {
+  display: block;
+  color: white;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.admin-select {
+  width: 100%;
+  padding: 12px;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.admin-select:focus {
+  outline: none;
+  border-color: #4d7ceb;
+}
+
+/* Data Preview */
+.admin-search-box {
+  display: flex;
+  align-items: center;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.admin-search-input::placeholder {
+  color: #888;
+}
+
+.admin-entries-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  background-color: #1a1a1a;
+}
+
+.admin-entry-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  color: white;
+}
+
+.admin-entry-item:last-child {
+  border-bottom: none;
+}
+
+.admin-entry-name {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.admin-entry-ticket {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.admin-entry-email {
+  font-size: 12px;
+  color: #888;
+}
+
+.admin-loading,
+.admin-no-entries {
+  padding: 24px;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}
+
+.admin-error-message,
+.admin-success-message {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.admin-error-message {
+  background-color: #fee;
+  color: #d82135;
+}
+
+.admin-success-message {
+  background-color: #efe;
+  color: #24a643;
+}
+
+/* Overwrite Dialog */
+.overwrite-confirm-dialog {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.overwrite-dialog-content {
+  background-color: #1a1a1a;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 400px;
+  border: 1px solid #3a3a3a;
+}
+
+.overwrite-dialog-content h3 {
+  color: white;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.overwrite-dialog-content p {
+  color: #ccc;
+  margin-bottom: 20px;
+}
+
+.overwrite-dialog-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
