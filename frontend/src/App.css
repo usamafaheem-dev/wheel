@@ -1215,9 +1215,19 @@ body {
   .wheel-wrapper canvas {
     background: transparent !important;
     background-color: transparent !important;
+    /* Force transparency on mobile - override any browser defaults */
+    -webkit-background-color: transparent !important;
+    -moz-background-color: transparent !important;
+    -ms-background-color: transparent !important;
   }
   
   .wheel-wrapper > div {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  /* Deep fix: Ensure canvas element itself has no background */
+  .wheel-wrapper canvas[style] {
     background: transparent !important;
     background-color: transparent !important;
   }

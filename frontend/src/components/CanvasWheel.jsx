@@ -62,16 +62,35 @@ const CanvasWheel = memo(({ names, colors, rotation, width = 800, height = 800, 
                 const displayWidth = canvas.clientWidth || width
                 const displayHeight = canvas.clientHeight || height
 
+                // CRITICAL MOBILE FIX: Set canvas element style BEFORE setting dimensions
+                // Mobile browsers sometimes apply default black background
+                canvas.style.background = 'transparent'
+                canvas.style.backgroundColor = 'transparent'
+                
                 // Set actual size in memory (scaled to account for extra pixel density)
                 // Note: Setting width/height resets the canvas, so we need to ensure transparency
                 canvas.width = displayWidth * dpr
                 canvas.height = displayHeight * dpr
                 
-                // Immediately clear to transparent after reset (important for mobile browsers)
+                // CRITICAL FIX FOR MOBILE: Canvas reset ho gaya hai
+                // Mobile browsers mein canvas reset ke baad black background dikh sakta hai
+                // Immediately clear entire canvas to transparent (BEFORE scaling)
+                // Use actual pixel dimensions (not scaled)
                 ctx.clearRect(0, 0, displayWidth * dpr, displayHeight * dpr)
-
+                
                 // Normalize coordinate system to use css pixels
                 ctx.scale(dpr, dpr)
+                
+                // MOBILE FIX: Clear again after scaling to ensure transparency
+                // Some mobile browsers need this double clear
+                ctx.clearRect(0, 0, displayWidth, displayHeight)
+                
+                // Ensure composite operation allows transparency
+                ctx.globalCompositeOperation = 'source-over'
+                
+                // MOBILE FIX: Re-apply canvas style after reset (some browsers reset styles too)
+                canvas.style.background = 'transparent'
+                canvas.style.backgroundColor = 'transparent'
                 
                 // Enable image smoothing for better quality
                 ctx.imageSmoothingEnabled = true
