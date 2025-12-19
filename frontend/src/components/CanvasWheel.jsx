@@ -11,12 +11,17 @@ const CanvasWheel = memo(({ names, colors, rotation, width = 800, height = 800, 
     useEffect(() => {
         const canvas = canvasRef.current
         // Use optimized context settings for smooth animation
+        // IMPORTANT: alpha: true ensures transparent background (critical for mobile)
         const ctx = canvas.getContext('2d', {
-            alpha: true,
+            alpha: true, // This is crucial - makes canvas transparent instead of black
             desynchronized: true, // Better performance for animations
             willReadFrequently: false,
             powerPreference: 'high-performance' // Use dedicated GPU if available
         })
+        
+        // Ensure canvas element itself has no background (extra safety for mobile)
+        canvas.style.background = 'transparent'
+        canvas.style.backgroundColor = 'transparent'
         
         // Optimize context settings for large lists
         if (names.length > 2000) {
@@ -58,8 +63,12 @@ const CanvasWheel = memo(({ names, colors, rotation, width = 800, height = 800, 
                 const displayHeight = canvas.clientHeight || height
 
                 // Set actual size in memory (scaled to account for extra pixel density)
+                // Note: Setting width/height resets the canvas, so we need to ensure transparency
                 canvas.width = displayWidth * dpr
                 canvas.height = displayHeight * dpr
+                
+                // Immediately clear to transparent after reset (important for mobile browsers)
+                ctx.clearRect(0, 0, displayWidth * dpr, displayHeight * dpr)
 
                 // Normalize coordinate system to use css pixels
                 ctx.scale(dpr, dpr)
@@ -286,7 +295,11 @@ const CanvasWheel = memo(({ names, colors, rotation, width = 800, height = 800, 
                     const cacheSize = (radius + 20) * 2
                     offscreenCanvasRef.current.width = cacheSize
                     offscreenCanvasRef.current.height = cacheSize
+                    // Immediately clear to transparent after reset (important for mobile)
                     offscreenCtx.clearRect(0, 0, cacheSize, cacheSize)
+                    // Ensure offscreen canvas also has transparent background
+                    offscreenCanvasRef.current.style.background = 'transparent'
+                    offscreenCanvasRef.current.style.backgroundColor = 'transparent'
                     offscreenCtx.translate(cacheSize / 2, cacheSize / 2)
                     
                     // Draw segments to cache
