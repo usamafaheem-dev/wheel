@@ -183,8 +183,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`)
-  console.log(`📡 API: http://localhost:${PORT}/api`)
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Spin Wheel Backend API', status: 'running' })
 })
+
+// Export for Vercel serverless functions
+export default app
+
+// Run server locally if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`)
+    console.log(`📡 API: http://localhost:${PORT}/api`)
+  })
+}
 
