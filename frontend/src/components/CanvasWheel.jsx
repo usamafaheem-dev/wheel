@@ -573,6 +573,8 @@ const CanvasWheel = memo(({ names, colors, rotation, width = 800, height = 800, 
                 width: '100%',
                 height: '100%',
                 touchAction: 'none',
+                background: 'transparent',
+                backgroundColor: 'transparent',
                 // GPU acceleration for better performance
                 willChange: names.length > 2000 ? 'transform' : 'auto',
                 transform: 'translateZ(0)',
