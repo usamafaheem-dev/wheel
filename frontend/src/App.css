@@ -1216,6 +1216,21 @@ body {
     background: transparent !important;
     background-color: transparent !important;
   }
+  
+  .wheel-wrapper > div {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-pointer {
+    /* Mobile/Tablet: Arrow at wheel start/edge, smaller size */
+    top: 50% !important;
+    right: 3px !important; /* At wheel edge */
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 26px !important; /* Small size */
+    height: 26px !important;
+  }
 
   .right-sidebar {
     width: 100%;
@@ -1309,10 +1324,13 @@ body {
   }
 
   .wheel-pointer {
-    /* Fixed position - same on all screens - arrow tip touches wheel edge */
-    right: 56px !important;
-    width: 40px !important;
-    height: 40px !important;
+    /* Mobile: Arrow at wheel start/edge, smaller size */
+    top: 50% !important;
+    right: 3px !important; /* At wheel edge */
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 24px !important; /* Small size */
+    height: 24px !important;
   }
 
   .right-sidebar {
@@ -1334,16 +1352,30 @@ body {
     background-color: transparent !important;
   }
   
-  .wheel-container {
+  .wheel-wrapper > div {
     background: transparent !important;
     background-color: transparent !important;
   }
+  
+  .wheel-wrapper canvas {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-container {
+    background: transparent !important;
+    background-color: transparent !important;
+    padding: 15px !important;
+  }
 
   .wheel-pointer {
-    /* Fixed position - same on all screens - arrow tip touches wheel edge */
-    right: 56px !important;
-    width: 40px !important;
-    height: 40px !important;
+    /* Mobile: Arrow at wheel start/edge, smaller size */
+    top: 50% !important;
+    right: 2px !important; /* At wheel edge */
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 22px !important; /* Small size */
+    height: 22px !important;
   }
 
   .right-sidebar {
@@ -1385,16 +1417,30 @@ body {
     background-color: transparent !important;
   }
   
-  .wheel-container {
+  .wheel-wrapper > div {
     background: transparent !important;
     background-color: transparent !important;
   }
-
+  
+  .wheel-wrapper canvas {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .wheel-container {
+    background: transparent !important;
+    background-color: transparent !important;
+    padding: 10px !important;
+  }
+  
   .wheel-pointer {
-    /* Fixed position - same on all screens - arrow tip touches wheel edge */
-    right: 56px !important;
-    width: 40px !important;
-    height: 40px !important;
+    /* Small screens: Arrow at wheel start/edge, smallest size */
+    top: 50% !important;
+    right: 2px !important; /* At wheel edge with small gap */
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    width: 20px !important; /* Small size for mobile */
+    height: 20px !important;
   }
 
   .right-sidebar {
@@ -1492,6 +1538,8 @@ body {
   justify-content: center;
   align-items: center;
   position: relative;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .fullscreen-minimize-btn {
@@ -1528,6 +1576,8 @@ body {
   justify-content: center;
   align-items: center;
   padding: 40px;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .wheel-container-fullscreen .wheel-wrapper {
@@ -1535,12 +1585,19 @@ body {
   height: min(90vh, 90vw);
   max-width: 1000px;
   max-height: 1000px;
+  background: transparent !important;
+  background-color: transparent !important;
   
   /* Ensure same CSS variables for consistent pointer positioning */
   --wheel-padding: 20px;
   --pointer-tip-depth: 0.9;
   --pointer-size: 40px; /* Same size for consistent positioning across all screens */
   --pointer-offset: 2px;
+}
+
+.wheel-container-fullscreen .wheel-wrapper canvas {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .wheel-container-fullscreen .wheel-pointer {

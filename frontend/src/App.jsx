@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import confetti from 'canvas-confetti'
 import { FiSettings, FiFile, FiFolder, FiSave, FiShare2, FiSearch, FiMaximize, FiChevronDown, FiGlobe, FiShuffle, FiArrowUp, FiArrowDown, FiPlay, FiSquare, FiHelpCircle, FiImage, FiDroplet, FiUpload, FiAward, FiX } from 'react-icons/fi'
 import './App.css'
-import CanvasWheel from './components/CanvasWheel'
+// Lazy load CanvasWheel for better performance and reduced initial bundle size
+const CanvasWheel = lazy(() => import('./components/CanvasWheel'))
 import AdminPanel from './components/AdminPanel'
 import { getActiveFiles, getStoredFiles } from './utils/storage'
 import { getWheelData, saveWheelData, resetWheel } from './services/wheelApi'
@@ -1708,15 +1709,29 @@ function App() {
           <div className="wheel-container-fullscreen">
             <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
               <div style={{ width: '100%', height: '100%', background: 'transparent', backgroundColor: 'transparent' }}>
-                <CanvasWheel
-                  names={names}
-                  colors={colors}
-                  rotation={finalRotation}
-                  width={750}
-                  height={750}
-                  centerImage={centerImage}
-                  centerImageSize={centerImageSize}
-                />
+                <Suspense fallback={
+                  <div style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'transparent',
+                    backgroundColor: 'transparent'
+                  }}>
+                    <div style={{ color: 'white', fontSize: '18px' }}>Loading wheel...</div>
+                  </div>
+                }>
+                  <CanvasWheel
+                    names={names}
+                    colors={colors}
+                    rotation={finalRotation}
+                    width={750}
+                    height={750}
+                    centerImage={centerImage}
+                    centerImageSize={centerImageSize}
+                  />
+                </Suspense>
                 {/* Fixed Arrow Pointer at 3 o'clock (right side) - Does NOT rotate with wheel */}
                 <svg
                   className="wheel-pointer"
@@ -1980,17 +1995,31 @@ function App() {
         <div className="wheel-container">
           <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
             <div style={{ width: '100%', height: '100%', background: 'transparent', backgroundColor: 'transparent' }}>
-              <CanvasWheel
-                names={names}
-                colors={colors}
-                rotation={finalRotation}
-                width={750}
-                height={750}
-                centerImage={centerImage}
-                centerImageSize={centerImageSize}
-                isSpinning={isSpinning}
-                showTextDuringSpin={showTextDuringSpin}
-              />
+              <Suspense fallback={
+                <div style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  backgroundColor: 'transparent'
+                }}>
+                  <div style={{ color: 'white', fontSize: '18px' }}>Loading wheel...</div>
+                </div>
+              }>
+                <CanvasWheel
+                  names={names}
+                  colors={colors}
+                  rotation={finalRotation}
+                  width={750}
+                  height={750}
+                  centerImage={centerImage}
+                  centerImageSize={centerImageSize}
+                  isSpinning={isSpinning}
+                  showTextDuringSpin={showTextDuringSpin}
+                />
+              </Suspense>
             </div>
 
             {/* Fixed arc text overlay - doesn't rotate */}
