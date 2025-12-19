@@ -1187,9 +1187,13 @@ function App() {
     }
   }, [])
 
+  // Track if data is being loaded to prevent auto-save from overwriting
+  const isLoadingDataRef = useRef(false)
+  
   // Load wheel data from MongoDB on mount
   useEffect(() => {
     const loadWheelData = async () => {
+      isLoadingDataRef.current = true
       try {
         const data = await getWheelData(wheelId)
         if (data && data.entries && data.entries.length > 0) {
@@ -1204,7 +1208,20 @@ function App() {
           }
         }
       } catch (err) {
-        // Wheel not found - use default data
+        // Log error for debugging
+        console.error('Failed to load wheel data from backend:', err.message)
+        // Wheel not found - use default data (only if it's a 404, not a network error)
+        if (err.message === 'Wheel not found') {
+          // This is expected for new wheels
+        } else {
+          // Network or other error - show warning but continue
+          console.warn('Could not load data from backend, using local state')
+        }
+      } finally {
+        // Allow auto-save after loading is complete
+        setTimeout(() => {
+          isLoadingDataRef.current = false
+        }, 3000) // Wait 3 seconds after load before allowing auto-save
       }
     }
     loadWheelData()
@@ -1212,6 +1229,11 @@ function App() {
 
   // Auto-save to MongoDB when names change (debounced)
   useEffect(() => {
+    // Don't auto-save if we're currently loading data or if it's default data
+    if (isLoadingDataRef.current) {
+      return // Skip auto-save while loading
+    }
+    
     if (names.length > 0 && names[0] !== 'Ali') { // Don't save default data
       const saveTimeout = setTimeout(() => {
         saveWheelData(wheelId, {
@@ -1545,6 +1567,8 @@ function App() {
         }
         
         // Save to MongoDB instead of localStorage
+        // Mark that we're saving user data (not loading)
+        isLoadingDataRef.current = false
         saveWheelData(wheelId, {
           entries: finalNames,
           nameToTicketMap: finalTicketMap,
@@ -1552,8 +1576,11 @@ function App() {
           nameToIndexMap: finalIndexMap,
           ticketToIndexMap: ticketIndexMap,
           settings: settings
+        }).then(() => {
+          console.log('✅ Wheel data saved successfully to backend')
         }).catch(err => {
-          console.error('Failed to save to MongoDB:', err)
+          console.error('❌ Failed to save to MongoDB:', err)
+          alert('Warning: Failed to save data to backend. Please try again.')
         })
       } else {
         alert('Warning: No entries to display. All entries may have been filtered out.')

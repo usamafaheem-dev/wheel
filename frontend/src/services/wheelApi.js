@@ -1,4 +1,10 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// API URL - Use Vercel backend
+const API_URL = import.meta.env.VITE_API_URL || 'https://wheel1-gray.vercel.app/api'
+
+// Log API URL for debugging (only in development)
+if (import.meta.env.DEV) {
+  console.log('🔗 Using API URL:', API_URL)
+}
 
 export const getWheelData = async (wheelId) => {
   const response = await fetch(`${API_URL}/wheel/${wheelId}`)
