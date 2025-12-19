@@ -96,6 +96,8 @@ body {
   aspect-ratio: 1;
   /* Ensure arrow isn't clipped if it sticks out */
   overflow: visible;
+  background: transparent;
+  background-color: transparent;
 
   /* Geometry Constants */
   /* Geometry Constants */

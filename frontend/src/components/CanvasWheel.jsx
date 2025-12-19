@@ -209,7 +209,7 @@ const CanvasWheel = memo(({ names, colors, rotation, width = 800, height = 800, 
 
         // Helper to draw the wheel (extracted for reuse)
         function drawWheel(centerX, centerY, radius, displayWidth, displayHeight) {
-            // Clear canvas
+            // Clear canvas - this should make it transparent with alpha: true
             ctx.clearRect(0, 0, displayWidth, displayHeight)
 
             const numSegments = names.length

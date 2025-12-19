@@ -1707,7 +1707,7 @@ function App() {
           </button>
           <div className="wheel-container-fullscreen">
             <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
-              <div style={{ width: '100%', height: '100%' }}>
+              <div style={{ width: '100%', height: '100%', background: 'transparent', backgroundColor: 'transparent' }}>
                 <CanvasWheel
                   names={names}
                   colors={colors}
@@ -1979,7 +1979,7 @@ function App() {
         {/* Center - Wheel */}
         <div className="wheel-container">
           <div className="wheel-wrapper" onClick={handleWheelClick} style={{ cursor: (isSpinning || showWinner) ? 'not-allowed' : 'pointer' }}>
-            <div style={{ width: '100%', height: '100%' }}>
+            <div style={{ width: '100%', height: '100%', background: 'transparent', backgroundColor: 'transparent' }}>
               <CanvasWheel
                 names={names}
                 colors={colors}
